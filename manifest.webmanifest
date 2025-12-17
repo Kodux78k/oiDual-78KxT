@@ -1,0 +1,15 @@
+{
+  "name": "Dual 78KxaT",
+  "short_name": "78KxaT",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#050811",
+  "theme_color": "#00f5ff",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
