@@ -925,7 +925,7 @@ window.onload = () => App.init();
             };
 
             update();
-            setInterval(update, 60000); // Checa a cada minuto
+            setInterval(update, 600000); // Checa a cada minuto
         },
 
         /* --- MÓDULO HERO CARDS (UPLOAD & ISOLAMENTO) --- */
@@ -947,7 +947,7 @@ window.onload = () => App.init();
             // Aqui injetamos o HTML do seu card de "Bom Dia" ou qualquer outro
             shadow.innerHTML = `
                 <style>
-                    :host { display: block; margin-bottom: 15px; transition: all 0.3s; }
+                    :host { display: block; margin-bottom: 39px; transition: all 0.3s; }
                     .card-frame { 
                         background: rgba(255,255,255,0.05); 
                         backdrop-filter: blur(10px);
