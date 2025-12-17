@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Dual.Infodose v4.3 · SOLAR NEBULA MONOLITH</title>
+
+  <meta name="theme-color" content="#050811" />
+  <link rel="manifest" href="./manifest.webmanifest">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <style>
+    /* =========================
+       SOLAR NEBULA PRO — CORE CSS
+    ========================= */
+    :root {
+      /* Gradientes Solares */
+      --bg-day: radial-gradient(circle at 20% 10%, #fff9c4 0%, #ffe082 35%, #ffb74d 70%, #ff9800 100%);
+      --bg-sunset: radial-gradient(circle at 10% 0%, #ffd180 0%, #ff8a65 30%, #f06292 60%, #7e57c2 100%);
+      --bg-night: radial-gradient(circle at 20% 0%, #0b1020 0%, #121c3b 40%, #1a237e 80%, #000000 100%);
+
+      /* UI Base */
+      --bg-deep: #050811;
+      --bg-panel: rgba(10, 14, 24, 0.90);
+      --primary: #00f5ff;
+      --secondary: #ff4bff;
+      --text-main: #e4ecff;
+      --text-muted: #9aa4c8;
+      --danger: #ff4b6b;
+      
+      --glass: blur(16px) saturate(180%);
+      --border-light: 1px solid rgba(255, 255, 255, 0.08);
+      
+      --radius-lg: 24px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+    }
+
+    /* =========================
+       ESTILOS GERAIS
+    ========================= */
+    body {
+        margin: 0; padding: 0;
+        width: 100vw; height: 100vh;
+        background: var(--bg-deep);
+        color: var(--text-main);
+        font-family: "Montserrat", system-ui, sans-serif;
+        overflow: hidden;
+        display: flex; flex-direction: column;
+        transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s ease;
+    }
+
+    /* Mapeamento de Modos */
+    body.mode-day { background: var(--bg-day) !important; color: #1a1a1a !important; }
+    body.mode-sunset { background: var(--bg-sunset) !important; color: #fff !important; }
+    body.mode-night { background: var(--bg-night) !important; color: var(--text-main) !important; }
+
+    /* Adaptação de UI Interna baseada no Modo */
+    body.mode-day .msg-block.ai { background: rgba(0,0,0,0.05); color: #222; border-color: rgba(0,0,0,0.1); }
+    body.mode-day .msg-block.user { background: rgba(0,245,255,0.1); color: #000; border-color: var(--primary); }
+    body.mode-day .glass-input { background: rgba(255,255,255,0.8); color: #000; border-color: #ccc; }
+    body.mode-day #usernameDisplay { color: #444; font-weight: 600; }
+    body.mode-day .btn-icon { color: #333; border-color: rgba(0,0,0,0.2); }
+    
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; will-change: transform, opacity; }
+
+    /* --- CAMADA SKY & PARTÍCULAS --- */
+    .sky-layer { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+    
+    .sun-background {
+      position: absolute; width: 250px; height: 250px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fffde7 0%, #fff176 40%, #ffb300 100%);
+      filter: blur(40px); opacity: 0; transition: opacity 2s;
+      animation: sun-orbit 60s linear infinite;
+    }
+    body.mode-day .sun-background { opacity: 0.4; }
+    
+    @keyframes sun-orbit {
+      0% { transform: translate(-20vw, 10vh); }
+      50% { transform: translate(80vw, -10vh); }
+      100% { transform: translate(-20vw, 10vh); }
+    }
+
+    #particles-js { position: fixed; inset: 0; z-index: 1; opacity: 0.3; pointer-events: none; transition: opacity 0.6s ease; }
+    body.mode-day #particles-js { opacity: 0.1; }
+    body.field-crystallizing #particles-js { opacity: 0.8; }
+    body.field-closed #particles-js { opacity: 0.15; }
+
+    #bg-fake-custom { position: fixed; inset: 0; z-index: 2; opacity: 0.2; background-size: cover; background-position: center; transition: opacity 0.5s ease; pointer-events: none; }
+
+    /* --- HEADER / ORB --- */
+    .header-orb {
+      position: fixed; top: 40px; left: 50%; transform: translateX(-50%);
+      width: 80px; height: 80px; z-index: 15;
+      animation: floatOrb 6s ease-in-out infinite;
+      pointer-events: auto; cursor: pointer;
+      transition: all 0.5s ease;
+      transform-origin: center;
+    }
+    .header-orb svg { width: 100%; height: 100%; transition: fill 0.5s ease; }
+
+    /* Estados Visuais do Orbe */
+    body.mode-day .header-orb { filter: drop-shadow(0 0 40px #ffea00); transform: translateX(-50%) scale(1.1); }
+    body.mode-day .header-orb svg { fill: #fff176; }
+    body.mode-sunset .header-orb { filter: drop-shadow(0 0 30px #ff5722); }
+    body.mode-sunset .header-orb svg { fill: #ffd180; }
+    body.mode-night .header-orb { filter: drop-shadow(0 0 15px var(--primary)); }
+    body.mode-night .header-orb svg { fill: white; }
+
+    @keyframes floatOrb { 0%,100%{transform:translate(-50%,0)} 50%{transform:translate(-50%,-10px)} }
+    
+    #usernameDisplay {
+        position: fixed; top: 125px; left: 50%; 
+        transform: translateX(-50%); z-index: 10;
+        font-size: 0.8rem; color: var(--text-muted);
+        opacity: 0.7; pointer-events: none;
+        transition: opacity 0.3s ease; text-transform: uppercase; letter-spacing: 1px;
+    }
+    body.field-closed #usernameDisplay { opacity: 0.4; }
+
+    /* Toast e Indicador de Modo */
+    #nv-toast {
+      position: fixed; bottom: 200px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 50px;
+      backdrop-filter: blur(10px); opacity: 0; transition: 0.4s; z-index: 9999;
+      font-size: 0.8rem; pointer-events: none;
+    }
+    #nv-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    
+    #modeIndicator {
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      font-size: 0.65rem; color: inherit; opacity: 0.5; z-index: 9999; 
+      text-transform: uppercase; letter-spacing: 1px; mix-blend-mode: overlay;
+    }
+
+    /* --- CHAT AREA --- */
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 50; pointer-events: none; }
+    .top-grp { display: flex; gap: 10px; pointer-events: auto; }
+
+    #chat-container { flex: 1; overflow-y: auto; padding: 140px 16px 100px 16px; z-index: 5; scroll-behavior: smooth; display: flex; flex-direction: column; gap: 16px; transition: all 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); opacity: 1; pointer-events: auto; }
+    #chat-container.collapsed { opacity: 0; pointer-events: none; transform: translateY(20px); padding-top: 500px; }
+
+    .msg-block { max-width: 85%; padding: 14px 18px; border-radius: var(--radius-md); position: relative; animation: slideIn 0.3s ease-out; line-height: 1.6; font-size: 0.95rem; word-wrap: break-word; }
+    .msg-block.user { align-self: flex-end; background: linear-gradient(135deg, rgba(0,245,255,0.1), rgba(0,245,255,0.02)); border: var(--border-light); border-right: 3px solid var(--primary); text-align: right; }
+    .msg-block.ai { align-self: flex-start; background: rgba(255,255,255,0.03); border: var(--border-light); border-left: 3px solid var(--secondary); }
+    .msg-block.system { align-self: center; font-size: 0.8rem; opacity: 0.7; text-align: center; max-width: 90%; border: 1px dashed rgba(255,255,255,0.1); background: transparent; padding: 8px 15px; font-style: italic; letter-spacing: 0.05em; color: inherit; }
+    .msg-block.system.pulse-oracular { border: 1px dashed var(--secondary); color: var(--secondary); opacity: 1; animation: pulseGlow 1.5s infinite alternate; }
+    
+    @keyframes pulseGlow { from { box-shadow: 0 0 5px rgba(255, 75, 255, 0.2); } to { box-shadow: 0 0 10px rgba(255, 75, 255, 0.4); } }
+    @keyframes slideIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+    
+    .msg-tools { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; opacity: 0.6; }
+    .msg-block.ai .msg-tools { justify-content: flex-start; }
+    .tool-btn { background: none; border: none; color: inherit; opacity: 0.7; padding: 0; cursor: pointer; transition: 0.2s; }
+    .tool-btn:hover { color: var(--primary); transform: scale(1.1); opacity: 1; }
+    .tool-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+    
+    .edit-save-btn {
+        background: var(--primary); color: #000; border: none; border-radius: 6px; 
+        padding: 8px 15px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        box-shadow: 0 0 10px rgba(0, 245, 255, 0.4);
+    }
+    .edit-save-btn:hover { background: white; box-shadow: 0 0 20px var(--primary); }
+
+    /* --- INPUT AREA --- */
+    .input-dock { position: fixed; bottom: 0; left: 0; right: 0; padding: 16px; background: linear-gradient(to top, var(--bg-deep) 20%, transparent); z-index: 20; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+    body.mode-day .input-dock { background: linear-gradient(to top, rgba(255,255,255,0.5) 20%, transparent); }
+
+    #field-toggle-handle { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: .78rem; letter-spacing: .08em; opacity: .8; cursor: pointer; user-select: none; transition: all .4s ease; padding-bottom: 10px; color: inherit; }
+    #field-toggle-handle:hover { opacity: 1; color: var(--primary); }
+    .footer-dot{ width:6px; height:6px; border-radius:50%; background:var(--secondary); box-shadow:0 0 10px var(--secondary); animation:pulse 2s infinite; }
+    @keyframes pulse{50%{opacity:.4}}
+    
+    .input-row { display: flex; width: 100%; gap: 10px; align-items: center; }
+    #input-field-wrapper { flex: 1; position: relative; }
+    
+    .glass-input { width: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); color: white; padding: 14px 20px; padding-right: 60px; border-radius: 99px; font-family: inherit; outline: none; transition: 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .glass-input:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(0, 245, 255, 0.2); background: rgba(0,0,0,0.7); }
+    
+    .glass-textarea { width: 100%; min-height: 120px; background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 14px; border-radius: var(--radius-md); font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; outline: none; transition: 0.3s; resize: vertical; }
+    .glass-textarea:focus { border-color: var(--secondary); box-shadow: 0 0 15px rgba(255, 75, 255, 0.2); background: rgba(0,0,0,0.7); }
+
+    /* --- BUTTONS --- */
+    .btn-icon { width: 44px; height: 44px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; background: rgba(255,255,255,0.05); color: inherit; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
+    .btn-icon:hover { background: rgba(255,255,255,0.15); transform: scale(1.05); border-color: currentColor; }
+    .btn-icon svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2; fill: none; }
+    
+    .btn-primary { background: var(--primary); color: #000 !important; border: none; box-shadow: 0 0 10px rgba(0, 245, 255, 0.4); }
+    .btn-primary:hover { background: #fff; box-shadow: 0 0 20px var(--primary); }
+    
+    #btnSend { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; box-shadow: 0 0 15px rgba(0, 245, 255, 0.6); z-index: 5; }
+    #btnSend:hover { box-shadow: 0 0 25px var(--primary); transform: translateY(-50%) scale(1.05); }
+    #btnVoice.listening { background: var(--danger); box-shadow: 0 0 15px var(--danger); animation: listeningPulse 1s infinite; color: white !important; }
+    
+    @keyframes listeningPulse { 0% { transform: scale(1.0); box-shadow: 0 0 5px var(--danger); } 50% { transform: scale(1.1); box-shadow: 0 0 20px var(--danger); } 100% { transform: scale(1.0); box-shadow: 0 0 5px var(--danger); } }
+
+    /* --- DRAWERS / MODALS --- */
+    .drawer { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; color: var(--text-main); }
+    .drawer.open { opacity: 1; pointer-events: auto; }
+    .drawer-content { position: absolute; top: 50%; left: 50%; width: 90%; max-width: 500px; max-height: 90%; background: var(--bg-panel); backdrop-filter: var(--glass); border: var(--border-light); border-radius: var(--radius-lg); transform: translate(-50%, -50%) scale(0.8); opacity: 0; transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s; display: flex; flex-direction: column; }
+    .drawer.open .drawer-content { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    .drawer-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: var(--border-light); flex-shrink: 0; }
+    .drawer-body { flex-grow: 1; padding: 20px; overflow-y: auto; }
+
+    /* Forms & Status */
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .form-input { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 8px; outline: none; }
+    .form-small-text { font-size:0.7rem; color:var(--text-muted); margin-top:5px; }
+    .input-upload-fake { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+    .input-upload-fake .btn-icon { border-radius: 8px; }
+
+    .status-display { background: rgba(0, 245, 255, 0.1); border: 1px solid var(--primary); border-radius: var(--radius-md); padding: 15px; margin-bottom: 20px; }
+    .status-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.05); }
+    .status-item:last-child { border-bottom: none; }
+    .status-item strong { color: var(--text-main); font-weight: 600; }
+    .status-item span { color: var(--primary); font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Cards Grid */
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+    .slot { width: 60px; height: 80px; border: 1px dashed var(--text-muted); display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 0.8rem; }
+    .fusion-area { display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 20px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #particles-js { opacity: 0.25 !important; }
+      body.field-crystallizing #particles-js { opacity: 0.45 !important; }
+      .header-orb { width: 60px; height: 60px; top: 24px; }
+      #usernameDisplay { top: 95px; }
+      #chat-container { padding-top: 120px; padding-bottom: 120px; }
+      .msg-block { max-width: 92%; font-size: 0.92rem; }
+      .btn-icon { width: 40px; height: 40px; }
+      .drawer-content { width: 94%; max-height: 92%; }
+    }
+  </style>
+  <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+  <style id="custom-styles"></style> 
+</head>
+
+<body class="field-closed theme-dark mode-night">
+
+  <svg style="display:none">
+    <symbol id="icon-orb" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></symbol>
+    <symbol id="icon-cards" viewBox="0 0 24 24"><rect x="2" y="2" width="16" height="16" rx="2"/><path d="M22 6v14a2 2 0 0 1-2 2H6"/></symbol>
+    <symbol id="icon-gem" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z"/></symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="icon-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+    <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></symbol>
+    <symbol id="icon-voice" viewBox="0 0 24 24"><rect x="9" y="1" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></symbol>
+    <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+  </svg>
+
+  <div class="sky-layer">
+    <div class="sun-background"></div>
+  </div>
+  
+  <div id="particles-js"></div>
+  <div id="bg-fake-custom"></div> 
+  <div id="nv-toast"></div>
+  <div id="modeIndicator">SISTEMA SOLAR ONLINE</div>
+
+  <div class="header-orb" id="orbToggle" title="Acessar Cockpit do Usuário">
+    <svg><use href="#icon-orb"></use></svg>
+  </div>
+  <div id="usernameDisplay"></div>
+
+  <div class="top-bar">
+    <div class="top-grp">
+      <button class="btn-icon" id="btnSettings" title="Configurações">
+        <svg><use href="#icon-settings"></use></svg>
+      </button>
+    </div>
+    <div class="top-grp">
+      <button class="btn-icon" id="btnDeck" title="Deck de Memória">
+        <svg><use href="#icon-cards"></use></svg>
+      </button>
+      <button class="btn-icon" id="btnCrystallize" title="Cristalizar (Salvar)">
+        <svg><use href="#icon-gem"></use></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="chat-container" class="collapsed">
+    <div class="msg-block system">
+      Registro Vivo Δ7 · Infodose Pro<br>Conectado ao Campo Solar.
+    </div>
+  </div>
+
+  <div class="input-dock">
+    <div id="field-toggle-handle">
+        <span class="footer-dot"></span>
+        tocar o campo é consentir
+    </div>
+
+    <div class="input-row">
+        <button class="btn-icon" id="btnVoice" title="Reconhecimento de Voz">
+            <svg><use href="#icon-voice"></use></svg>
+        </button>
+
+        <div id="input-field-wrapper">
+            <input type="text" id="userInput" class="glass-input" placeholder="Emitir pulso..." autocomplete="off">
+            <button class="btn-icon btn-primary" id="btnSend" title="Enviar Pulso">
+              <svg><use href="#icon-send"></use></svg>
+            </button>
+        </div>
+    </div>
+  </div>
+
+  <div id="drawerSettings" class="drawer">
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h3>Configuração do Campo</h3>
+        <button class="btn-icon" onclick="toggleDrawer('drawerSettings')">✕</button>
+      </div>
+      <div class="drawer-body">
+        
+        <h4>Identificação e Login</h4>
+        <div class="form-group">
+            <label>ID do Locutor / Usuário</label>
+            <input type="text" id="userInputID" class="form-input" placeholder="Anônimo Δ7" />
+        </div>
+
+        <h4>Conexão do Oráculo</h4>
+        <div class="form-group">
+          <label>Chave do Oráculo (OpenRouter / OpenAI)</label>
+          <input type="password" id="apiKeyInput" class="form-input" placeholder="sk-or-..." />
+        </div>
+        
+        <div class="form-group">
+          <label>Modelo IA</label>
+          <select id="modelSelect" class="form-input">
+            <option value="google/gemini-2.0-flash-exp">Gemini 2.0 Flash (Recomendado)</option>
+            <option value="mistralai/mistral-7b-instruct:free">**Mistral 7B (Gratuito)**</option>
+            <option value="google/gemma-7b-it:free">**Gemma 7B (Gratuito)**</option>
+          </select>
+        </div>
+        <div class="form-group">
+            <label>Modelo Personalizado</label>
+            <input type="text" id="customModelInput" class="form-input" placeholder="ex: meta-llama/llama-3-8b-instruct" />
+        </div>
+        
+        <div class="form-group">
+            <label>System Role (Prompt)</label>
+            <textarea id="systemRoleInput" class="glass-textarea" placeholder="Você é o Oráculo do Campo Infodose..."></textarea>
+        </div>
+
+        <hr style="border-color:rgba(255,255,255,0.1); margin:20px 0;">
+        <h4>Injeção Dinâmica</h4>
+        <div class="form-group">
+            <label>Upload de Arquivo CSS</label>
+            <div class="input-upload-fake">
+                <input type="file" id="cssUploadInput" accept=".css,text/plain" style="flex-grow:1;"/>
+                <button class="btn-icon" id="btnClearCss" title="Remover CSS"><svg style="width:16px; height:16px;"><use href="#icon-trash"></use></svg></button>
+            </div>
+        </div>
+        <div class="form-group">
+            <textarea id="customCssInput" class="glass-textarea" placeholder="CSS Personalizado..."></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label>Background Fake (Imagem)</label>
+            <div class="input-upload-fake">
+                <input type="file" id="bgUploadInput" accept="image/*" style="flex-grow:1;"/>
+                <button class="btn-icon" id="btnClearBg" title="Remover Background"><svg style="width:16px; height:16px;"><use href="#icon-trash"></use></svg></button>
+            </div>
+        </div>
+
+        <button class="btn-icon btn-primary" style="width:100%; border-radius:8px; margin-top:10px;" id="btnSaveConfig">Salvar Configurações</button>
+        <button class="btn-icon" style="width:100%; border-radius:8px; color:var(--danger); border-color:var(--danger); margin-top:15px;" onclick="localStorage.clear(); App.indexedDB.clearAll(); location.reload();">Resetar Sistema Total</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="drawerProfile" class="drawer">
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h3><svg style="width:20px; height:20px; margin-right:8px; stroke:var(--secondary); fill:none;"><use href="#icon-orb"></use></svg> Cockpit Solar</h3>
+        <button class="btn-icon" onclick="toggleDrawer('drawerProfile')">✕</button>
+      </div>
+      <div class="drawer-body">
+        
+        <div class="status-display">
+            <div class="status-item">
+                <strong>Modo Solar:</strong>
+                <span id="statusSolarMode">Carregando...</span>
+            </div>
+            <div class="status-item">
+                <strong>Usuário:</strong>
+                <span id="statusUser">Anônimo Δ7</span>
+            </div>
+            <div class="status-item">
+                <strong>Arquétipo:</strong>
+                <span id="statusArchetype">Latência</span>
+            </div>
+            <div class="status-item">
+                <strong>Modelo IA:</strong>
+                <span id="statusModel">Padrão</span>
+            </div>
+        </div>
+        
+        <button id="btnCycleSolar" class="btn-icon" style="width:100%; border-radius:8px; margin-bottom:15px; background: rgba(255,165,0,0.2); border: 1px solid orange;">
+            ☀️ Alternar Ciclo Solar Manualmente
+        </button>
+
+        <div class="status-display" style="background:rgba(255,75,255,0.1); border-color:var(--secondary);">
+            <div class="status-item"><strong>CSS:</strong><span id="statusCustomCss">Inativo</span></div>
+            <div class="status-item"><strong>Background:</strong><span id="statusBgFake">Inativo</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="drawerDeck" class="drawer">
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h3>Deck de Memória</h3>
+        <button class="btn-icon" onclick="toggleDrawer('drawerDeck')">✕</button>
+      </div>
+      <div class="drawer-body">
+        <p style="font-size:0.8rem; color:var(--text-muted); text-align:center;">As memórias cristalizadas aparecerão aqui.</p>
+        <div class="cards-grid" id="cardsGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalCrystal" class="drawer">
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h3>Cristalização de Pulso</h3>
+        <button class="btn-icon" onclick="toggleDrawer('modalCrystal')">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div class="form-group">
+          <label>Nome do Cristal</label>
+          <input type="text" id="crystalName" class="form-input" placeholder="Pulso [Data]" />
+        </div>
+        <div class="form-group">
+          <label>Arquétipo</label>
+          <input type="text" id="crystalArch" class="form-input" placeholder="Técnico/Ritual" />
+        </div>
+        <button id="doCrystal" class="edit-save-btn" style="width:100%; margin-top:10px; border-radius:8px;">💎 Cristalizar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================
+       DUAL.INFODOSE ENGINE v4.3 PRO — SOLAR NEBULA MONOLITH
+       INTEGRAÇÃO TOTAL: HTML + CSS SOLAR + JS AVANÇADO + TTS
+    ========================================================= */
+
+    const STORAGE = {
+      API_KEY: 'KDX_API_KEY', MODEL: 'KDX_MODEL', CUSTOM_MODEL: 'KDX_CUSTOM_MODEL',
+      SYSTEM_ROLE: 'KDX_SYSTEM_ROLE', USER_ID: 'KDX_USER_ID', CARDS: 'KDX_CARDS',
+      BG_IMAGE: 'KDX_BG_IMAGE', CUSTOM_CSS: 'KDX_CUSTOM_CSS', SOLAR_MODE: 'KDX_SOLAR_MODE'
+    };
+    const DEFAULT_SYSTEM_ROLE = 'Você é o Oráculo do Campo Infodose. Responda com clareza e precisão.';
+    const DB_NAME = "InfodoseDB"; const DB_VERSION = 1;
+
+    /* Textos do Rodapé */
+    const FOOTER_TEXTS = {
+      closed: { ritual: [ "tocar o campo é consentir", "o registro aguarda presença", "abrir é escolher ouvir" ], tecnico: [ "há pulso em latência", "o campo escuta em silêncio", "aguardando emissão de pulso" ] },
+      open: { sustentado: [ "campo ativo", "pulso sustentado", "registro em curso" ], estavel: [ "campo estabilizado", "consciência transmitindo", "processamento em ordem" ] },
+      cristalizacao: [ "o mapa está se formando", "fusão de campos iniciada", "o oráculo se manifesta", "cristal em estabilização", "campo em ressonância máxima" ]
+    };
+    let lastText = null;
+    function getRandomText(arr) { let t; do { t = arr[Math.floor(Math.random() * arr.length)]; } while (t === lastText); lastText = t; return t; }
+
+    /* Lógica de Toggle do Campo + TTS */
+    function getFooterTone(messageCount, isOpen) {
+      if (App.fieldState.crystallizing) return { type: 'cristalizacao', isOracular: true };
+      const toneKey = messageCount >= 6 ? (isOpen ? 'estavel' : 'tecnico') : (isOpen ? 'sustentado' : 'ritual');
+      return { type: isOpen ? 'open' : 'closed', toneKey };
+    }
+
+    function setField(open) {
+      const chat = document.getElementById('chat-container');
+      const handle = document.getElementById('field-toggle-handle');
+      App.fieldState.open = open;
+      chat.classList.toggle('collapsed', !open);
+      document.body.classList.toggle('field-closed', !open);
+      if (open) chat.scrollTop = chat.scrollHeight;
+
+      const count = App.state.messages.filter(m => m.role !== 'system').length;
+      const tone = getFooterTone(count, open);
+      let text = tone.isOracular ? getRandomText(FOOTER_TEXTS.cristalizacao) : getRandomText(FOOTER_TEXTS[tone.type][tone.toneKey]);
+      let color = tone.isOracular ? 'var(--secondary)' : 'var(--primary)';
+
+      handle.innerHTML = `<span class="footer-dot" style="background:${color};box-shadow:0 0 10px ${color};"></span>${text}`;
+      
+      // TTS ATIVADO AQUI
+      App.speakText(text);
+    }
+
+    /* =========================
+       APP CORE
+    ========================= */
+    const App = {
+      fieldState: { open: false, crystallizing: false },
+      state: { messages: [], apiKey: '', model: '', systemRole: DEFAULT_SYSTEM_ROLE, userId: 'Anônimo Δ7', solarMode: 'night', isVoiceListening: false },
+      recognition: null,
+
+      init() {
+        // Carrega Settings
+        this.state.apiKey = localStorage.getItem(STORAGE.API_KEY) || '';
+        this.state.model  = localStorage.getItem(STORAGE.MODEL) || 'google/gemini-2.0-flash-exp';
+        this.state.userId = localStorage.getItem(STORAGE.USER_ID) || 'Anônimo Δ7';
+        this.state.systemRole = localStorage.getItem(STORAGE.SYSTEM_ROLE) || DEFAULT_SYSTEM_ROLE;
+        
+        // Popula UI Settings
+        document.getElementById('apiKeyInput').value = this.state.apiKey;
+        document.getElementById('userInputID').value = this.state.userId;
+        document.getElementById('systemRoleInput').value = this.state.systemRole;
+        this.populateModelSelect(document.getElementById('modelSelect'));
+        document.getElementById('modelSelect').value = this.state.model;
+
+        // Assets e Solar
+        this.indexedDB.loadCustomCSS();
+        this.indexedDB.loadBackground();
+        
+        // Solar Initialization (Automática, sem pesar o loop)
+        this.autoByTime(); 
+
+        this.bindEvents();
+        this.updateStatusPanel();
+        setField(false);
+        this.addSystemMsg("Sistema Solar Nebula Monolith v4.3 online.");
+      },
+
+      /* TTS Function (Voz do Sistema) */
+      speakText(text) {
+          if(!text) return;
+          window.speechSynthesis.cancel(); // Para fala anterior
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = 'pt-BR';
+          u.rate = 1.1; // Um pouco mais rápido para parecer IA
+          window.speechSynthesis.speak(u);
+      },
+
+      /* Lógica Solar */
+      cycleSolar() {
+        if (this.state.solarMode === 'day') this.setMode('sunset');
+        else if (this.state.solarMode === 'sunset') this.setMode('night');
+        else this.setMode('day');
+        this.showToast(`Modo Manual: ${this.state.solarMode.toUpperCase()}`);
+      },
+      setMode(mode) {
+        this.state.solarMode = mode;
+        document.body.classList.remove('mode-day', 'mode-sunset', 'mode-night');
+        document.body.classList.add(`mode-${mode}`);
+        localStorage.setItem(STORAGE.SOLAR_MODE, mode);
+        
+        const labels = { day: "DIA · CAPTAÇÃO ☀️", sunset: "PÔR DO SOL · TRANSIÇÃO 🌇", night: "NOITE · REDE 🌙" };
+        document.getElementById('modeIndicator').textContent = labels[mode];
+        this.updateStatusPanel();
+      },
+      autoByTime() {
+        const h = new Date().getHours();
+        if (h >= 6 && h < 16) this.setMode('day');
+        else if (h >= 16 && h < 19) this.setMode('sunset');
+        else this.setMode('night');
+      },
+      showToast(msg) {
+        const t = document.getElementById('nv-toast');
+        t.textContent = msg; t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+      },
+
+      bindEvents() {
+        document.getElementById('btnSend').onclick = () => this.handleSend();
+        document.getElementById('userInput').onkeypress = e => { if (e.key === 'Enter') this.handleSend(); };
+        document.getElementById('field-toggle-handle').onclick = () => setField(!this.fieldState.open);
+        document.getElementById('btnVoice').onclick = () => this.startVoiceInput();
+        
+        document.getElementById('btnSettings').onclick = () => {
+            toggleDrawer('drawerSettings');
+            this.indexedDB.getAsset(STORAGE.CUSTOM_CSS).then(d => { document.getElementById('customCssInput').value = d?.css || ''; });
+        };
+        document.getElementById('btnDeck').onclick = () => toggleDrawer('drawerDeck');
+        document.getElementById('btnCrystallize').onclick = () => toggleDrawer('modalCrystal');
+        document.getElementById('doCrystal').onclick = () => {
+            this.showToast("Cristalizando...");
+            setTimeout(() => { toggleDrawer('modalCrystal'); this.showToast("Memória Salva (Simulação)"); }, 1000);
+        };
+
+        // Configurações
+        document.getElementById('btnSaveConfig').onclick = () => this.saveConfiguration();
+        document.getElementById('bgUploadInput').onchange = (e) => this.indexedDB.handleBackgroundUpload(e.target.files[0]);
+        document.getElementById('btnClearBg').onclick = () => this.indexedDB.clearAsset(STORAGE.BG_IMAGE);
+        document.getElementById('cssUploadInput').onchange = (e) => this.indexedDB.handleCSSUpload(e.target.files[0]);
+        document.getElementById('btnClearCss').onclick = () => this.indexedDB.clearAsset(STORAGE.CUSTOM_CSS);
+
+        // ORB LOGIC FIX (Abre Profile + Fala)
+        const orb = document.getElementById('orbToggle');
+        orb.onclick = () => {
+            toggleDrawer('drawerProfile');
+            this.speakText("Acessando Cockpit do Usuário.");
+        };
+        
+        // Manual Solar Toggle (Dentro do Profile)
+        document.getElementById('btnCycleSolar').onclick = () => this.cycleSolar();
+      },
+
+      saveConfiguration() {
+          const key = document.getElementById('apiKeyInput').value.trim();
+          const mod = document.getElementById('modelSelect').value;
+          const customMod = document.getElementById('customModelInput').value.trim();
+          const role = document.getElementById('systemRoleInput').value.trim();
+          const userId = document.getElementById('userInputID').value.trim() || 'Anônimo Δ7';
+          const customCss = document.getElementById('customCssInput').value;
+          
+          localStorage.setItem(STORAGE.API_KEY, key);
+          localStorage.setItem(STORAGE.MODEL, mod);
+          localStorage.setItem(STORAGE.SYSTEM_ROLE, role);
+          localStorage.setItem(STORAGE.USER_ID, userId);
+          
+          if (customMod && customMod !== mod) {
+             localStorage.setItem(STORAGE.CUSTOM_MODEL, customMod);
+          }
+
+          this.state.apiKey = key; this.state.model = mod; this.state.systemRole = role; this.state.userId = userId;
+          this.indexedDB.saveCustomCSS(customCss);
+
+          toggleDrawer('drawerSettings');
+          this.showToast("Configurações Salvas");
+          this.updateStatusPanel();
+      },
+      
+      populateModelSelect(selectElement) {
+        const custom = localStorage.getItem(STORAGE.CUSTOM_MODEL);
+        if (custom) {
+          const option = document.createElement('option');
+          option.value = custom; option.textContent = `⚡️ ${custom} (Custom)`;
+          selectElement.prepend(option);
+        }
+      },
+
+      /* STT (Speech to Text) */
+      startVoiceInput() {
+          if (!('webkitSpeechRecognition' in window)) return this.showToast("Navegador sem suporte a voz.");
+          if (this.state.isVoiceListening) { this.recognition.stop(); return; }
+          const btn = document.getElementById('btnVoice');
+          const input = document.getElementById('userInput');
+          
+          this.recognition = new webkitSpeechRecognition();
+          this.recognition.lang = 'pt-BR'; this.recognition.interimResults = true;
+          this.recognition.onstart = () => { this.state.isVoiceListening = true; btn.classList.add('listening'); input.placeholder = "Ouvindo..."; };
+          this.recognition.onresult = (e) => {
+              let final = '';
+              for (let i = e.resultIndex; i < e.results.length; ++i) { if (e.results[i].isFinal) final += e.results[i][0].transcript; }
+              if(final) { input.value = final; this.handleSend(); }
+          };
+          this.recognition.onend = () => { this.state.isVoiceListening = false; btn.classList.remove('listening'); input.placeholder = "Emitir pulso..."; };
+          this.recognition.start();
+      },
+
+      /* Messaging */
+      async handleSend() {
+        const input = document.getElementById('userInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.value = '';
+        this.addMessage('user', text);
+        setField(true);
+
+        if (!this.state.apiKey && !this.state.model.includes(':free')) {
+          this.addMessage('ai', "⚠️ **Sem chave de API.** Configure a OpenRouter ou use um modelo gratuito.");
+          return;
+        }
+
+        try {
+          document.body.classList.add('field-crystallizing');
+          this.addSystemMsg("Invocando Oráculo...", 'pulse-oracular');
+          
+          const response = await this.fetchAI(text);
+          this.addMessage('ai', response);
+        } catch (e) {
+          this.addSystemMsg("Erro: " + e.message);
+        } finally {
+          document.body.classList.remove('field-crystallizing');
+          const lastSys = document.querySelector('.msg-block.system.pulse-oracular:last-child');
+          if (lastSys) lastSys.remove();
+          setField(this.fieldState.open);
+        }
+      },
+
+      async fetchAI(prompt) {
+        const msgs = this.state.messages.slice(-20);
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${this.state.apiKey || 'FREE'}`, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin },
+            body: JSON.stringify({
+              model: this.state.model,
+              messages: [ { role: 'system', content: this.state.systemRole }, ...msgs.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: prompt } ]
+            })
+        });
+        if (!res.ok) throw new Error("Falha OpenRouter");
+        const data = await res.json();
+        return data.choices?.[0]?.message?.content || 'Vazio.';
+      },
+
+      addMessage(role, text, extraClass = '') {
+        const c = document.getElementById('chat-container');
+        const d = document.createElement('div');
+        d.className = `msg-block ${role} ${extraClass}`;
+        
+        const content = role === 'ai' ? marked.parse(text) : text.replace(/\n/g, '<br>');
+        let tools = '';
+        if (role !== 'system') {
+           tools = `<div class="msg-tools">
+                <button class="tool-btn" onclick="Utils.copy(this)"><svg><use href="#icon-copy"></use></svg></button>
+                ${role === 'user' ? `<button class="tool-btn" onclick="Utils.edit(this)"><svg><use href="#icon-edit"></use></svg></button>` : ''}
+                <button class="tool-btn" onclick="Utils.speak(this)"><svg><use href="#icon-mic"></use></svg></button>
+                <button class="tool-btn" onclick="Utils.delete(this)"><svg><use href="#icon-trash"></use></svg></button>
+              </div>`;
+        }
+        
+        d.innerHTML = `<div class="msg-content">${content}</div>${tools}`;
+        c.appendChild(d);
+        c.scrollTop = c.scrollHeight;
+        if (role !== 'system') this.state.messages.push({ role: role === 'ai' ? 'assistant' : 'user', content: text });
+      },
+      addSystemMsg(text, extra='') { this.addMessage('system', text, extra); },
+
+      updateStatusPanel() {
+        document.getElementById('statusUser').textContent = this.state.userId;
+        document.getElementById('statusModel').textContent = this.state.model;
+        document.getElementById('usernameDisplay').textContent = this.state.userId;
+        document.getElementById('statusSolarMode').textContent = this.state.solarMode.toUpperCase();
+        
+        this.indexedDB.getAsset(STORAGE.CUSTOM_CSS).then(d => { 
+             document.getElementById('statusCustomCss').textContent = d && d.css ? 'Ativo' : 'Inativo'; 
+        });
+        this.indexedDB.getAsset(STORAGE.BG_IMAGE).then(d => { 
+             document.getElementById('statusBgFake').textContent = d && d.blob ? 'Ativo' : 'Inativo'; 
+        });
+      }
+    };
+
+    /* =========================
+       INDEXEDDB
+    ========================= */
+    App.indexedDB = {
+        openDB() { return new Promise((resolve, reject) => {
+            const r = indexedDB.open(DB_NAME, DB_VERSION);
+            r.onerror = (e) => reject(e);
+            r.onupgradeneeded = (e) => { if(!e.target.result.objectStoreNames.contains('assets')) e.target.result.createObjectStore('assets', { keyPath: 'id' }); };
+            r.onsuccess = (e) => resolve(e.target.result);
+        });},
+        async getAsset(id) { try { const db = await this.openDB(); return new Promise(r => { const req = db.transaction(['assets'],'readonly').objectStore('assets').get(id); req.onsuccess = e => r(e.target.result); req.onerror = () => r(null); }); } catch{return null;} },
+        async putAsset(id, data) { const db = await this.openDB(); const tx = db.transaction(['assets'],'readwrite'); tx.objectStore('assets').put({id,...data}); return new Promise(r=>tx.oncomplete=r); },
+        async clearAsset(id) { 
+            const db = await this.openDB(); db.transaction(['assets'],'readwrite').objectStore('assets').delete(id); 
+            if(id===STORAGE.BG_IMAGE) { document.getElementById('bg-fake-custom').style.backgroundImage='none'; document.getElementById('bgUploadInput').value=''; }
+            if(id===STORAGE.CUSTOM_CSS) { document.getElementById('custom-styles').textContent=''; document.getElementById('customCssInput').value=''; }
+            App.showToast("Asset Removido"); App.updateStatusPanel();
+        },
+        async clearAll() { (await this.openDB()).transaction(['assets'],'readwrite').objectStore('assets').clear(); },
+        
+        async loadBackground() { const d = await this.getAsset(STORAGE.BG_IMAGE); if(d?.blob) document.getElementById('bg-fake-custom').style.backgroundImage = `url('${URL.createObjectURL(d.blob)}')`; },
+        async handleBackgroundUpload(file) { if(!file)return; await this.putAsset(STORAGE.BG_IMAGE, {blob:file}); this.loadBackground(); App.showToast("BG Atualizado"); App.updateStatusPanel(); },
+        
+        async loadCustomCSS() { const d = await this.getAsset(STORAGE.CUSTOM_CSS); if(d?.css) { document.getElementById('custom-styles').textContent = d.css; document.getElementById('customCssInput').value = d.css; } },
+        async saveCustomCSS(css) { if(!css) return this.clearAsset(STORAGE.CUSTOM_CSS); await this.putAsset(STORAGE.CUSTOM_CSS, {css, ts:Date.now()}); document.getElementById('custom-styles').textContent = css; App.updateStatusPanel(); },
+        async handleCSSUpload(file) { if(!file)return; const r = new FileReader(); r.onload=e=>{ this.saveCustomCSS(e.target.result); document.getElementById('customCssInput').value = e.target.result; }; r.readAsText(file); }
+    };
+
+    /* =========================
+       UTILS
+    ========================= */
+    const Utils = {
+      copy(btn) { navigator.clipboard.writeText(btn.closest('.msg-block').querySelector('.msg-content').innerText); App.showToast("Copiado"); },
+      speak(btn) { const u = new SpeechSynthesisUtterance(btn.closest('.msg-block').querySelector('.msg-content').innerText); u.lang = 'pt-BR'; u.rate = 1.1; speechSynthesis.speak(u); },
+      delete(btn) { btn.closest('.msg-block').remove(); },
+      edit(btn) {
+          const blk = btn.closest('.msg-block'); const cnt = blk.querySelector('.msg-content'); const tls = blk.querySelector('.msg-tools');
+          const area = document.createElement('textarea'); area.className = 'glass-textarea'; area.value = cnt.innerText;
+          const save = document.createElement('button'); save.textContent = 'Salvar'; save.className = 'edit-save-btn'; save.style.width='100%';
+          cnt.style.display='none'; tls.style.display='none'; blk.appendChild(area); blk.appendChild(save);
+          save.onclick = () => { cnt.innerHTML = area.value.replace(/\n/g, '<br>'); area.remove(); save.remove(); cnt.style.display='block'; tls.style.display='flex'; };
+      }
+    };
+
+    function toggleDrawer(id) { document.getElementById(id).classList.toggle('open'); }
+    window.onload = () => { App.init(); if(typeof particlesJS !== 'undefined') particlesJS('particles-js', {particles:{number:{value:40},color:{value:"#ffffff"},opacity:{value:0.5},size:{value:2},line_linked:{enable:true,distance:150,color:"#ffffff",opacity:0.2,width:1}}}); };
+  </script>
+</body>
+</html>
