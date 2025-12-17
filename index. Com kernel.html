@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Dual.Infodose v4.6 · SOLAR MONOLITH</title>
+
+  <meta name="theme-color" content="#050811" />
+  <link rel="manifest" href="./manifest.webmanifest">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <style>
+    /* =========================
+       SOLAR NEBULA PRO — CORE CSS (BLINDADO)
+    ========================= */
+    :root {
+      --bg-deep: #050811; 
+      
+      /* Gradientes Solares */
+      --bg-day: radial-gradient(circle at 30% 20%, #ffffff 0%, #f2f8ff 18%, #d0e9ff 40%, #9ed0ff 65%, #6bb9ff 85%, #59a8ff 100%);
+      --bg-sunset: linear-gradient(180deg, #fbcfe8 0%, #fb923c 20%, #4c1d95 60%, #111827 100%);
+      --bg-night: radial-gradient(circle at 20% 0%, #0b1020 0%, #121c3b 40%, #1a237e 80%, #000000 100%);
+
+      /* UI Tokens */
+      --bg-panel: rgba(10, 14, 24, 0.95);
+      --primary: #00f5ff;
+      --secondary: #ff4bff;
+      --text-main: #e4ecff;
+      --text-muted: #9aa4c8;
+      --danger: #ff4b6b;
+      
+      --glass: blur(20px) saturate(180%);
+      --border-light: 1px solid rgba(255, 255, 255, 0.1);
+      
+      --radius-lg: 24px;
+      --radius-md: 12px;
+    }
+
+    /* Reset & Base */
+    html, body {
+        margin: 0; padding: 0;
+        width: 100%; height: 100%;
+        background-color: var(--bg-deep);
+        background: var(--bg-deep);
+        color: var(--text-main);
+        font-family: "Montserrat", sans-serif;
+        overflow: hidden;
+        transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.mode-day { background: var(--bg-day) !important; color: #1a1a1a !important; }
+    body.mode-sunset { background: var(--bg-sunset) !important; color: #fff !important; }
+    body.mode-night { background: var(--bg-night) !important; color: var(--text-main) !important; }
+
+    /* Adaptação de UI Interna */
+    body.mode-day .msg-block.ai { background: rgba(0,0,0,0.05); color: #222; border-color: rgba(0,0,0,0.1); }
+    body.mode-day .glass-input { background: rgba(255,255,255,0.8); color: #000; border-color: #ccc; }
+    body.mode-day .btn-icon { color: #333; border-color: rgba(0,0,0,0.2); }
+    body.mode-day .cockpit-item { background: rgba(0,0,0,0.05); color: #000; }
+    body.mode-day .cockpit-input { color: #000; border-bottom-color: rgba(0,0,0,0.3); }
+    
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    /* --- CAMADAS DE FUNDO --- */
+    .sky-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .sun-background {
+      position: absolute; width: 300px; height: 300px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fffde7 0%, #fff176 40%, #ffb300 100%);
+      filter: blur(60px); opacity: 0; transition: opacity 2s;
+      animation: sun-orbit 60s linear infinite;
+    }
+    body.mode-day .sun-background { opacity: 0.5; }
+    
+    @keyframes sun-orbit {
+      0% { transform: translate(-20vw, 10vh); }
+      50% { transform: translate(80vw, -10vh); }
+      100% { transform: translate(-20vw, 10vh); }
+    }
+
+    #particles-js { position: fixed; inset: 0; z-index: 1; opacity: 0.3; pointer-events: none; transition: opacity 0.6s ease; }
+    body.mode-day #particles-js { opacity: 0.1; }
+    
+    #bg-fake-custom { position: fixed; inset: 0; z-index: 2; opacity: 0.2; background-size: cover; background-position: center; pointer-events: none; }
+
+    /* --- HEADER / ORB --- */
+    .header-orb {
+      position: fixed; top: 40px; left: 50%; transform: translateX(-50%);
+      width: 70px; height: 70px; z-index: 15;
+      animation: floatOrb 6s ease-in-out infinite;
+      cursor: pointer; transition: all 0.5s ease;
+    }
+    .header-orb svg { width: 100%; height: 100%; transition: fill 0.5s ease; filter: drop-shadow(0 0 10px rgba(0,245,255,0.5)); }
+
+    body.mode-day .header-orb svg { fill: #fff176; filter: drop-shadow(0 0 20px #ffb300); }
+    body.mode-sunset .header-orb svg { fill: #ffb74d; filter: drop-shadow(0 0 30px #e65100); }
+    body.mode-night .header-orb svg { fill: white; filter: drop-shadow(0 0 15px var(--primary)); }
+
+    @keyframes floatOrb { 0%,100%{transform:translate(-50%,0)} 50%{transform:translate(-50%,-8px)} }
+    
+    #usernameDisplay {
+        position: fixed; top: 120px; left: 50%; 
+        transform: translateX(-50%); z-index: 10;
+        font-size: 0.75rem; color: var(--text-muted);
+        opacity: 0.6; pointer-events: none;
+        text-transform: uppercase; letter-spacing: 2px;
+    }
+
+    /* Toast */
+    #nv-toast {
+      position: fixed; bottom: 200px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 50px;
+      backdrop-filter: blur(10px); opacity: 0; transition: 0.4s; z-index: 9999;
+      font-size: 0.8rem; pointer-events: none; border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    #nv-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    
+    #modeIndicator {
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      font-size: 0.65rem; font-weight: bold; opacity: 0.5; z-index: 20; 
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+
+    /* --- CHAT AREA --- */
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; padding: 15px; display: flex; justify-content: space-between; z-index: 20; pointer-events: none; }
+    .top-grp { display: flex; gap: 10px; pointer-events: auto; }
+
+    #chat-container { 
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        padding: 140px 16px 100px 16px; z-index: 5; 
+        overflow-y: auto; display: flex; flex-direction: column; gap: 16px; 
+        transition: opacity 0.4s ease; scroll-behavior: smooth;
+    }
+    #chat-container.collapsed { opacity: 0; pointer-events: none; }
+
+    .msg-block { max-width: 88%; padding: 12px 16px; border-radius: 12px; position: relative; animation: slideIn 0.3s ease-out; line-height: 1.5; font-size: 0.95rem; word-wrap: break-word; }
+    .msg-block.user { align-self: flex-end; background: rgba(0,245,255,0.08); border-right: 2px solid var(--primary); text-align: right; }
+    .msg-block.ai { align-self: flex-start; background: rgba(255,255,255,0.05); border-left: 2px solid var(--secondary); }
+    .msg-block.system { align-self: center; font-size: 0.75rem; opacity: 0.8; text-align: center; border: 1px dashed rgba(255,255,255,0.2); background: transparent; padding: 6px 12px; font-style: italic; }
+    
+    @keyframes slideIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+
+    .msg-tools { display: flex; gap: 10px; justify-content: flex-end; margin-top: 5px; opacity: 0.5; }
+    .msg-block.ai .msg-tools { justify-content: flex-start; }
+    .tool-btn { background: none; border: none; color: inherit; padding: 0; cursor: pointer; }
+    .tool-btn:hover { color: var(--primary); opacity: 1; }
+    .tool-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    /* --- INPUT AREA --- */
+    .input-dock { position: fixed; bottom: 0; left: 0; right: 0; padding: 16px; background: linear-gradient(to top, var(--bg-deep) 30%, transparent); z-index: 30; display: flex; flex-direction: column; align-items: center; }
+    body.mode-day .input-dock { background: linear-gradient(to top, rgba(255,255,255,0.8) 30%, transparent); }
+
+    #field-toggle-handle { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.8rem; opacity: 0.9; cursor: pointer; padding-bottom: 12px; text-transform: lowercase; letter-spacing: 1px; transition: 0.3s; }
+    #field-toggle-handle:hover { color: var(--primary); transform: scale(1.02); }
+    .footer-dot{ width:8px; height:8px; border-radius:50%; background:var(--secondary); animation:pulse 2s infinite; }
+    @keyframes pulse{50%{opacity:.4; box-shadow: 0 0 10px currentColor;}}
+    
+    .input-row { display: flex; width: 100%; gap: 10px; align-items: center; max-width: 800px; }
+    .glass-input { flex: 1; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color: inherit; padding: 14px 20px; border-radius: 99px; outline: none; transition: 0.3s; }
+    .glass-input:focus { background: rgba(0,0,0,0.5); border-color: var(--primary); box-shadow: 0 0 15px rgba(0,245,255,0.2); }
+    body.mode-day .glass-input:focus { background: white; }
+
+    /* --- BOTÕES --- */
+    .btn-icon { width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px); }
+    .btn-icon:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); border-color: var(--primary); }
+    .btn-icon svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2; fill: none; }
+    
+    .btn-primary { background: var(--primary); color: #000 !important; border: none; box-shadow: 0 0 10px rgba(0, 245, 255, 0.4); }
+    #btnVoice.listening { background: var(--danger); box-shadow: 0 0 15px var(--danger); animation: pulse 1s infinite; color: white !important; }
+
+    /* --- GAVETAS (DRAWERS) --- */
+    .drawer { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; }
+    .drawer.open { opacity: 1; pointer-events: auto; }
+    
+    .drawer-content { width: 90%; max-width: 450px; max-height: 85vh; background: var(--bg-panel); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    body.mode-day .drawer-content { background: #fff; color: #222; }
+
+    .drawer.open .drawer-content { transform: scale(1); }
+    
+    .drawer-header { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); }
+    body.mode-day .drawer-header { border-bottom-color: rgba(0,0,0,0.1); }
+    
+    .drawer-header h3 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
+    .drawer-body { padding: 20px; overflow-y: auto; flex: 1; }
+
+    /* COCKPIT EDITÁVEL */
+    .cockpit-grid { display: flex; flex-direction: column; gap: 15px; }
+    .cockpit-item { background: rgba(255,255,255,0.03); padding: 10px 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; }
+    .cockpit-label { font-size: 0.7rem; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+    body.mode-day .cockpit-label { color: #007bff; }
+    
+    .cockpit-input { background: transparent; border: none; color: white; font-family: 'JetBrains Mono', monospace; font-size: 1rem; outline: none; width: 100%; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px; transition: 0.3s; }
+    .cockpit-input:focus { border-bottom-color: var(--secondary); }
+
+    .control-row { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-block { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: inherit; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: 0.2s; }
+    body.mode-day .btn-block { background: #f0f0f0; border-color: #ddd; }
+    
+    .btn-block:hover { background: rgba(255,255,255,0.15); border-color: var(--primary); }
+    .btn-block.active { background: var(--primary); color: #000; border-color: var(--primary); }
+
+    /* Deck Items */
+    .deck-item { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+    body.mode-day .deck-item { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); }
+    .deck-info h4 { margin: 0 0 5px 0; font-size: 0.9rem; }
+    .deck-info span { font-size: 0.7rem; opacity: 0.7; }
+
+    /* Utility */
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 0.8rem; color: var(--text-muted); }
+    .glass-textarea { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); color: inherit; padding: 10px; border-radius: 8px; min-height: 80px; }
+    body.mode-day .glass-textarea { background: rgba(255,255,255,0.8); color: #000; border-color: #ccc; }
+
+    /* Edit Button no Chat */
+    .edit-save-btn { background: var(--primary); color: #000; border: none; padding: 5px 10px; border-radius: 5px; margin-top: 5px; cursor: pointer; font-weight: bold; }
+  </style>
+  <style id="custom-styles"></style> 
+</head>
+
+<body class="field-closed mode-day">
+
+  <svg style="display:none">
+    <symbol id="icon-orb" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="8"/></symbol>
+    <symbol id="icon-cards" viewBox="0 0 24 24"><rect x="2" y="2" width="16" height="16" rx="2"/><path d="M22 6v14a2 2 0 0 1-2 2H6"/></symbol>
+    <symbol id="icon-gem" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z"/></symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="icon-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+    <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></symbol>
+    <symbol id="icon-voice" viewBox="0 0 24 24"><rect x="9" y="1" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></symbol>
+    <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+    <symbol id="icon-restore" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
+  </svg>
+
+  <div class="sky-layer">
+    <div class="sun-background"></div>
+  </div>
+  
+  <div id="particles-js"></div>
+  <div id="bg-fake-custom"></div> 
+  <div id="nv-toast"></div>
+  <div id="modeIndicator">CARREGANDO nO.Sºlar...</div>
+
+  <div class="header-orb" id="orbToggle" title="Acessar Cockpit do Usuário">
+    <svg><use href="#icon-orb"></use></svg>
+  </div>
+  <div id="usernameDisplay"></div>
+
+  <div class="top-bar">
+    <div class="top-grp">
+      <button class="btn-icon" id="btnSettings" title="Configurações Avançadas">
+        <svg><use href="#icon-settings"></use></svg>
+      </button>
+    </div>
+    <div class="top-grp">
+      <button class="btn-icon" id="btnDeck" title="Deck de Memória">
+        <svg><use href="#icon-cards"></use></svg>
+      </button>
+      <button class="btn-icon" id="btnCrystallize" title="Cristalizar (Salvar)">
+        <svg><use href="#icon-gem"></use></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="chat-container" class="collapsed">
+    <div class="msg-block system">
+      Dual.Infodose v4.6<br>Sistemas re-alinhados.
+    </div>
+  </div>
+
+  <div class="input-dock">
+    <div id="field-toggle-handle">
+        <span class="footer-dot"></span>
+        tocar o campo é consentir
+    </div>
+
+    <div class="input-row">
+        <button class="btn-icon" id="btnVoice" title="Voz">
+            <svg><use href="#icon-voice"></use></svg>
+        </button>
+
+        <input type="text" id="userInput" class="glass-input" placeholder="Emitir pulso..." autocomplete="off">
+        
+        <button class="btn-icon btn-primary" id="btnSend" title="Enviar">
+          <svg><use href="#icon-send"></use></svg>
+        </button>
+    </div>
+  </div>
+
+  <div id="drawerSettings" class="drawer">
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h3>Configuração Neural</h3>
+        <button class="btn-icon" style="width:30px;height:30px" onclick="toggleDrawer('drawerSettings')">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div class="form-group">
+          <label>Chave Dual (API Key)</label>
+          <input type="password" id="apiKeyInput" class="glass-input" style="border-radius:8px; width:100%" placeholder="sk-..." />
+        </div>
+        <div class="form-group">
+            <label>Dual (Prompt)</label>
+            <textarea id="systemRoleInput" class="glass-textarea" placeholder="Você é o Oráculo..."></textarea>
+        </div>
+        <hr style="border-color:rgba(255,255,255,0.1); margin:15px 0;">
+        <div class="form-group">
+            <label>Seu (Style)</label>
+            <input type="file" id="cssUploadInput" accept=".css,text/plain" style="margin-bottom:5px; font-size:0.8rem;"/>
+            <textarea id="customCssInput" class="glass-textarea" placeholder="Cole CSS aqui..."></textarea>
+            <button class="btn-block" id="btnClearCss" style="margin-top:5px; color:var(--danger)">Remover CSS</button>
+        </div>
+        <button class="btn-block active" id="btnSaveConfig" style="margin-top:15px;">Salvar Tudo</button>
+        <button class="btn-block" style="margin-top:10px; color:var(--danger); border-color:var(--danger)" onclick="if(confirm('Resetar tudo?')) { localStorage.clear(); location.reload(); }">Factory Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="drawerProfile" class="drawer">
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h3><svg style="width:20px;height:20px;margin-right:8px;stroke:var(--secondary)"><use href="#icon-orb"></use></svg> Cockpit Solar</h3>
+        <button class="btn-icon" style="width:30px;height:30px" onclick="toggleDrawer('drawerProfile')">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div class="cockpit-item" style="text-align:center; margin-bottom:15px;">
+            <div class="cockpit-label">Ciclo Solar</div>
+            <div id="statusSolarMode" style="font-size:1.2rem; font-weight:bold; margin:5px 0;">AUTO</div>
+            <div class="control-row">
+                <button class="btn-block" id="btnCycleSolar">Manual ☀️/🌙</button>
+                <button class="btn-block" id="btnAutoSolar">Auto 🕒</button>
+            </div>
+        </div>
+        <div class="cockpit-grid">
+            <div class="cockpit-item">
+                <div class="cockpit-label">Identificação do Viajante</div>
+                <input type="text" id="inputUserId" class="cockpit-input" placeholder="Anônimo">
+            </div>
+            <div class="cockpit-item">
+                <div class="cockpit-label">Modelo de IA (Engine)</div>
+                <input type="text" id="inputModel" class="cockpit-input" placeholder="google/gemini-2.0-flash-exp">
+            </div>
+            <div class="cockpit-item">
+                <div class="cockpit-label">Background Visual</div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="bgStatusText" style="font-size:0.8rem; color:var(--text-muted)">Nenhum</span>
+                    <label class="btn-icon" style="width:30px; height:30px; border-radius:5px;">
+                        <input type="file" id="bgUploadInput" accept="image/*" style="display:none">
+                        <svg><use href="#icon-cards"></use></svg>
+                    </label>
+                </div>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="drawerDeck" class="drawer">
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h3>Memórias Cristalizadas</h3>
+        <button class="btn-icon" style="width:30px;height:30px" onclick="toggleDrawer('drawerDeck')">✕</button>
+      </div>
+      <div class="drawer-body" id="deckList">
+        <div style="text-align:center; color:var(--text-muted); margin-top:20px">
+           O vazio reina aqui.<br>Use o botão 💎 para salvar.
+        </div>
+      </div>
+    </div>
+  </div>
+
+ <script>
+  /* =========================================================
+   DUAL.INFODOSE v5.0 — AUTO SOLAR & VOICE FIX
+   - Voz habilitada para Mobile
+   - Tema Automático na inicialização
+   - Saudação de Boas-Vindas Falada
+   - Footer Interativo com Voz
+========================================================= */
+
+const STORAGE = {
+    API_KEY: 'KDX_API_KEY', MODEL: 'KDX_MODEL', 
+    SYSTEM_ROLE: 'KDX_SYSTEM_ROLE', USER_ID: 'KDX_USER_ID', 
+    BG_IMAGE: 'KDX_BG_IMAGE', CUSTOM_CSS: 'KDX_CUSTOM_CSS', 
+    SOLAR_MODE: 'KDX_SOLAR_MODE', SOLAR_AUTO: 'KDX_SOLAR_AUTO'
+};
+
+const FOOTER_TEXTS = {
+    closed: { 
+        ritual: [ "tocar o campo é consentir", "registro aguarda presença", "abrir é escolher ouvir" ], 
+        tecnico: [ "latência detectada", "campo em espera", "aguardando input" ] 
+    },
+    open: { 
+        sustentado: [ "campo ativo", "consciência expandida", "fluxo de dados aberto" ], 
+        estavel: [ "sinal estabilizado", "link neural firme", "processando..." ] 
+    },
+    loading: [ "sincronizando neuro-link...", "buscando no éter...", "decodificando sinal...", "aguarde a fusão..." ]
+};
+
+let lastText = null;
+function getRandomText(arr) { 
+    if (!arr || arr.length === 0) return "Processando...";
+    let t; 
+    do { t = arr[Math.floor(Math.random() * arr.length)]; } while (t === lastText && arr.length > 1); 
+    lastText = t; 
+    return t; 
+}
+
+/* --- APP CORE --- */
+const App = {
+    state: { 
+        open: false, 
+        messages: [], 
+        isAutoSolar: true, 
+        solarMode: 'night',
+        isProcessing: false 
+    },
+    
+    init() {
+        const s = localStorage;
+        
+        // Carregar Configs Básicas
+        document.getElementById('apiKeyInput').value = s.getItem(STORAGE.API_KEY) || '';
+        document.getElementById('systemRoleInput').value = s.getItem(STORAGE.SYSTEM_ROLE) || 'Você é o Oráculo.';
+        
+        const savedUser = s.getItem(STORAGE.USER_ID) || 'Viajante';
+        document.getElementById('inputUserId').value = savedUser;
+        document.getElementById('inputModel').value = s.getItem(STORAGE.MODEL) || 'google/gemini-2.0-flash-exp:free';
+
+        // --- LÓGICA SOLAR CRÍTICA (Executa Primeiro) ---
+        const savedAuto = s.getItem(STORAGE.SOLAR_AUTO);
+        this.state.isAutoSolar = savedAuto === 'false' ? false : true;
+        
+        // Aplica o tema imediatamente antes de renderizar o resto
+        if (this.state.isAutoSolar) {
+            this.autoByTime();
+        } else {
+            this.setMode(s.getItem(STORAGE.SOLAR_MODE) || 'night');
+        }
+
+        // Carregar Assets Visuais
+        this.indexedDB.loadCustomCSS();
+        this.indexedDB.loadBackground();
+
+        // Iniciar Eventos e UI
+        this.bindEvents();
+        this.updateUI();
+        this.toggleField(false, true); // Fecha o campo silenciosamente no início
+        this.renderDeck();
+        
+        // --- SAUDAÇÃO DE BOAS-VINDAS ---
+        setTimeout(() => {
+            const h = new Date().getHours();
+            let greeting = "Bem-vindo de volta";
+            
+            if (h >= 5 && h < 12) greeting = "Bom dia";
+            else if (h >= 12 && h < 18) greeting = "Boa tarde";
+            else greeting = "Boa noite";
+
+            // Dispara Toast e Voz
+            this.announce(`Dual Infodose Online. ${greeting}, ${savedUser}.`);
+        }, 1200); // Pequeno delay para garantir carregamento total
+
+        // Iniciar Partículas
+        if(typeof particlesJS !== 'undefined') particlesJS('particles-js', {particles:{number:{value:30},color:{value:"#ffffff"},opacity:{value:0.5},size:{value:2},line_linked:{enable:true,distance:150,color:"#ffffff",opacity:0.2,width:1}}});
+    },
+
+    /* --- SISTEMA DE VOZ (TTS) --- */
+    speakText(text) {
+        if (!text) return;
+        
+        // Cancela falas anteriores para evitar sobreposição (bug dos doces)
+        window.speechSynthesis.cancel(); 
+
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'pt-BR'; 
+        u.rate = 1.1; // Velocidade levemente ajustada
+        u.pitch = 1.0;
+        
+        // Força a fala (obs: requer interação do usuário no Chrome para funcionar 100% na primeira vez)
+        window.speechSynthesis.speak(u);
+    },
+
+    announce(text, isError = false) {
+        this.showToast(text, isError);
+        // O showToast já chama o speakText internamente
+    },
+
+    /* --- CRISTALIZAÇÃO (DECK) --- */
+    async crystallizeSession() {
+        if(this.state.messages.length === 0) {
+            this.announce("O vazio não pode ser cristalizado.", true);
+            return;
+        }
+
+        const title = this.state.messages.find(m => m.role === 'user')?.content || "Memória Sem Nome";
+        const crystal = {
+            id: Date.now(),
+            date: new Date().toLocaleString(),
+            title: title.substring(0, 25) + (title.length>25 ? "..." : ""),
+            data: [...this.state.messages]
+        };
+
+        await this.indexedDB.saveDeckItem(crystal);
+        this.renderDeck();
+        this.announce("Memória Cristalizada.");
+        
+        const d = document.getElementById('drawerDeck');
+        if(!d.classList.contains('open')) toggleDrawer('drawerDeck');
+    },
+
+    async renderDeck() {
+        const items = await this.indexedDB.getDeck();
+        const container = document.getElementById('deckList');
+        
+        if(!items || items.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:20px">O vazio reina aqui.<br>Use o botão 💎 para salvar.</div>';
+            return;
+        }
+
+        container.innerHTML = items.sort((a,b) => b.id - a.id).map(item => `
+            <div class="deck-item">
+                <div class="deck-info">
+                    <h4>${item.title}</h4>
+                    <span>${item.date} • ${item.data.length} msgs</span>
+                </div>
+                <div style="display:flex; gap:10px">
+                    <button class="tool-btn" onclick="App.restoreMemory(${item.id})"><svg><use href="#icon-restore"></use></svg></button>
+                    <button class="tool-btn" style="color:var(--danger)" onclick="App.deleteMemory(${item.id})"><svg><use href="#icon-trash"></use></svg></button>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    async restoreMemory(id) {
+        const items = await this.indexedDB.getDeck();
+        const item = items.find(i => i.id === id);
+        if(item) {
+            document.getElementById('chat-container').innerHTML = '';
+            this.state.messages = [];
+            item.data.forEach(msg => this.addMessage(msg.role === 'assistant' ? 'ai' : 'user', msg.content));
+            toggleDrawer('drawerDeck');
+            this.announce("Memória restaurada.");
+        }
+    },
+
+    async deleteMemory(id) {
+        if(!confirm("Quebrar este cristal?")) return;
+        await this.indexedDB.deleteDeckItem(id);
+        this.renderDeck();
+        this.announce("Fragmentos dispersos.");
+    },
+
+    /* --- LÓGICA DE ENVIO (CHAT) --- */
+    async handleSend() {
+        const input = document.getElementById('userInput');
+        const txt = input.value.trim();
+        
+        if (!txt || this.state.isProcessing) return;
+        
+        input.value = '';
+        this.addMessage('user', txt);
+        this.state.isProcessing = true;
+        
+        // Feedback no Footer + Voz de Carregamento
+        const footerHandle = document.getElementById('field-toggle-handle');
+        const loadTxt = getRandomText(FOOTER_TEXTS.loading);
+        footerHandle.innerHTML = `<span class="footer-dot pulse" style="background:var(--primary)"></span> ${loadTxt}`;
+        this.speakText(loadTxt); 
+
+        const key = localStorage.getItem(STORAGE.API_KEY);
+        const model = document.getElementById('inputModel').value;
+
+        if (!key && !model.includes(':free')) {
+            this.announce("Erro: API Key necessária.", true);
+            this.state.isProcessing = false;
+            this.toggleField(true, true); // Reabre sem falar
+            return;
+        }
+
+        try {
+            document.body.classList.add('loading');
+            if (!this.state.open) this.toggleField(true, true);
+
+            const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${key}`, 
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': location.origin 
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [ 
+                        { role: 'system', content: document.getElementById('systemRoleInput').value },
+                        ...this.state.messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+                        { role: 'user', content: txt } 
+                    ]
+                })
+            });
+
+            const data = await res.json();
+            if (data.error) throw new Error(data.error.message || "Erro desconhecido");
+
+            const aiTxt = data.choices?.[0]?.message?.content || "Sem sinal.";
+            this.addMessage('ai', aiTxt);
+
+            // Lê o início da resposta se o chat estiver aberto
+            if (this.state.open) {
+                // Limita a leitura a 200 caracteres para não ficar cansativo
+                const speakChunk = aiTxt.length > 200 ? aiTxt.substring(0, 200) + "..." : aiTxt;
+                this.speakText(speakChunk);
+            }
+
+        } catch (e) {
+            this.announce("Falha na conexão.", true);
+            this.addMessage('system', `Erro: ${e.message}`);
+        } finally {
+            document.body.classList.remove('loading');
+            this.state.isProcessing = false; 
+            // Atualiza o footer para estado estável
+            this.toggleField(this.state.open, true);
+        }
+    },
+
+    /* --- LÓGICA SOLAR (AUTO & MANUAL) --- */
+    setMode(mode) {
+        this.state.solarMode = mode;
+        document.body.classList.remove('mode-day', 'mode-sunset', 'mode-night');
+        document.body.classList.add(`mode-${mode}`);
+        localStorage.setItem(STORAGE.SOLAR_MODE, mode);
+        this.updateUI();
+    },
+    
+    cycleSolar() {
+        this.state.isAutoSolar = false;
+        localStorage.setItem(STORAGE.SOLAR_AUTO, 'false');
+        if (this.state.solarMode === 'day') this.setMode('sunset');
+        else if (this.state.solarMode === 'sunset') this.setMode('night');
+        else this.setMode('day');
+        
+        this.announce(`Modo ${this.translateMode(this.state.solarMode)}`);
+    },
+
+    enableAutoSolar() {
+        this.state.isAutoSolar = true;
+        localStorage.setItem(STORAGE.SOLAR_AUTO, 'true');
+        this.autoByTime();
+        this.announce("Sincronização Automática.");
+    },
+
+    autoByTime() {
+        if (!this.state.isAutoSolar) return;
+        
+        const h = new Date().getHours();
+        let m = 'night'; // Default Noite
+
+        if (h >= 6 && h < 17) m = 'day';           // 06:00 as 16:59 -> Dia
+        else if (h >= 17 && h < 19) m = 'sunset';  // 17:00 as 18:59 -> Pôr do Sol
+        else m = 'night';                          // 19:00 as 05:59 -> Noite
+
+        if (this.state.solarMode !== m) {
+            this.setMode(m);
+        } else {
+            this.updateUI();
+        }
+    },
+
+    translateMode(m) {
+        if(m==='day') return 'DIA';
+        if(m==='sunset') return 'OCASO';
+        return 'NOITE';
+    },
+
+    /* --- UI GERAL & FOOTER --- */
+    toggleField(forceState, silent = false) {
+        const isOpen = forceState !== undefined ? forceState : !this.state.open;
+        this.state.open = isOpen;
+        
+        const chat = document.getElementById('chat-container');
+        chat.classList.toggle('collapsed', !isOpen);
+        document.body.classList.toggle('field-closed', !isOpen);
+        
+        if (this.state.isProcessing) return;
+
+        const msgs = this.state.messages.length;
+        const type = isOpen ? (msgs > 5 ? 'estavel' : 'sustentado') : (msgs > 5 ? 'tecnico' : 'ritual');
+        const text = getRandomText(FOOTER_TEXTS[isOpen ? 'open' : 'closed'][type]);
+        
+        const handle = document.getElementById('field-toggle-handle');
+        handle.innerHTML = `<span class="footer-dot"></span> ${text}`;
+        
+        // Se NÃO for silencioso (clique do usuário), fala o texto do footer
+        if (!silent) this.speakText(text);
+        
+        if (isOpen) chat.scrollTop = chat.scrollHeight;
+    },
+
+    addMessage(role, text) {
+        const c = document.getElementById('chat-container');
+        const d = document.createElement('div');
+        d.className = `msg-block ${role}`;
+        
+        let html = role === 'ai' ? marked.parse(text) : text.replace(/\n/g, '<br>');
+        
+        if(role !== 'system') {
+            html += `<div class="msg-tools">
+                <button class="tool-btn" onclick="Utils.copy(this)"><svg><use href="#icon-copy"></use></svg></button>
+                <button class="tool-btn" onclick="Utils.speak(this)"><svg><use href="#icon-mic"></use></svg></button>
+                ${role === 'user' ? `<button class="tool-btn" onclick="Utils.edit(this)"><svg><use href="#icon-edit"></use></svg></button>` : ''}
+            </div>`;
+            this.state.messages.push({ role: role==='ai'?'assistant':'user', content: text });
+        }
+        
+        d.innerHTML = html;
+        c.appendChild(d);
+        c.scrollTop = c.scrollHeight;
+    },
+
+    updateUI() {
+        const m = this.state.solarMode;
+        const auto = this.state.isAutoSolar;
+        const label = document.getElementById('statusSolarMode');
+        const ind = document.getElementById('modeIndicator');
+        const btnAuto = document.getElementById('btnAutoSolar');
+        
+        label.textContent = `${this.translateMode(m)} ${auto ? '(AUTO)' : '(MANUAL)'}`;
+        label.style.color = auto ? 'var(--primary)' : 'orange';
+        
+        ind.textContent = `SISTEMA: ${this.translateMode(m)} // ${auto ? 'SYNC' : 'OVERRIDE'}`;
+        btnAuto.style.opacity = auto ? '1' : '0.5';
+        document.getElementById('usernameDisplay').textContent = document.getElementById('inputUserId').value;
+    },
+
+    /* --- EVENTOS --- */
+    bindEvents() {
+        document.getElementById('btnSend').onclick = () => this.handleSend();
+        document.getElementById('userInput').onkeypress = (e) => { if(e.key==='Enter') this.handleSend(); };
+        
+        // Footer agora fala ao ser clicado (silent = false)
+        document.getElementById('field-toggle-handle').onclick = () => this.toggleField(undefined, false);
+        
+        document.getElementById('orbToggle').onclick = () => { toggleDrawer('drawerProfile'); this.speakText("Cockpit Solar"); };
+        document.getElementById('btnCrystallize').onclick = () => this.crystallizeSession();
+
+        document.getElementById('btnCycleSolar').onclick = () => this.cycleSolar();
+        document.getElementById('btnAutoSolar').onclick = () => { this.enableAutoSolar(); this.updateUI(); };
+
+        document.getElementById('inputUserId').onchange = (e) => {
+            localStorage.setItem(STORAGE.USER_ID, e.target.value);
+            this.updateUI();
+            this.announce(`Identidade redefinida: ${e.target.value}`);
+        };
+
+        document.getElementById('inputModel').onchange = (e) => {
+            localStorage.setItem(STORAGE.MODEL, e.target.value);
+            this.updateUI();
+            this.showToast("Modelo Atualizado");
+        };
+
+        document.getElementById('btnSaveConfig').onclick = () => {
+            localStorage.setItem(STORAGE.API_KEY, document.getElementById('apiKeyInput').value);
+            localStorage.setItem(STORAGE.SYSTEM_ROLE, document.getElementById('systemRoleInput').value);
+            this.indexedDB.saveCustomCSS(document.getElementById('customCssInput').value);
+            toggleDrawer('drawerSettings');
+            this.announce("Configurações salvas.");
+        };
+
+        document.getElementById('bgUploadInput').onchange = (e) => this.indexedDB.handleBackgroundUpload(e.target.files[0]);
+        document.getElementById('btnSettings').onclick = () => toggleDrawer('drawerSettings');
+        document.getElementById('btnDeck').onclick = () => toggleDrawer('drawerDeck');
+        document.getElementById('btnClearCss').onclick = () => this.indexedDB.clearAsset(STORAGE.CUSTOM_CSS);
+        
+        document.getElementById('btnVoice').onclick = () => this.startVoice();
+    },
+    
+    startVoice() {
+        if (!('webkitSpeechRecognition' in window)) return alert("Navegador sem suporte a voz");
+        const r = new webkitSpeechRecognition();
+        r.lang = 'pt-BR';
+        r.onstart = () => {
+            document.getElementById('btnVoice').classList.add('listening');
+            this.showToast("Ouvindo..."); // Feedback visual e sonoro
+        };
+        r.onend = () => document.getElementById('btnVoice').classList.remove('listening');
+        r.onresult = (e) => { 
+            const txt = e.results[0][0].transcript;
+            document.getElementById('userInput').value = txt;
+            this.speakText(`Entendido: ${txt}`);
+            setTimeout(() => this.handleSend(), 1000);
+        };
+        r.start();
+    },
+
+    showToast(msg, isError = false) {
+        const t = document.getElementById('nv-toast');
+        t.textContent = msg; 
+        t.style.borderLeft = isError ? '4px solid #ff4444' : '4px solid var(--primary)';
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+        
+        // Garante a fala do Toast
+        this.speakText(msg);
+    },
+
+    /* --- INDEXEDDB (Armazenamento Local) --- */
+    indexedDB: {
+        dbName: "InfodoseDB",
+        async getDB() {
+            return new Promise((res, rej) => {
+                const r = indexedDB.open("InfodoseDB", 2);
+                r.onupgradeneeded = e => {
+                    const db = e.target.result;
+                    if(!db.objectStoreNames.contains('assets')) db.createObjectStore('assets', {keyPath: 'id'});
+                    if(!db.objectStoreNames.contains('deck')) db.createObjectStore('deck', {keyPath: 'id'});
+                };
+                r.onsuccess = e => res(e.target.result);
+                r.onerror = e => rej(e);
+            });
+        },
+        async putAsset(id, data) { const db = await this.getDB(); db.transaction(['assets'],'readwrite').objectStore('assets').put({id, ...data}); },
+        async getAsset(id) { const db = await this.getDB(); return new Promise(r => { const q = db.transaction(['assets'],'readonly').objectStore('assets').get(id); q.onsuccess = () => r(q.result); }); },
+        async clearAsset(id) { 
+            const db = await this.getDB(); db.transaction(['assets'],'readwrite').objectStore('assets').delete(id);
+            if(id === STORAGE.CUSTOM_CSS) { document.getElementById('custom-styles').textContent = ''; document.getElementById('customCssInput').value = ''; }
+            if(id === STORAGE.BG_IMAGE) { document.getElementById('bg-fake-custom').style.backgroundImage = 'none'; document.getElementById('bgStatusText').textContent = 'Nenhum'; }
+        },
+        async handleBackgroundUpload(file) {
+            if(!file) return;
+            await this.putAsset(STORAGE.BG_IMAGE, {blob: file});
+            this.loadBackground();
+        },
+        async loadBackground() {
+            const d = await this.getAsset(STORAGE.BG_IMAGE);
+            if(d && d.blob) {
+                document.getElementById('bg-fake-custom').style.backgroundImage = `url('${URL.createObjectURL(d.blob)}')`;
+                document.getElementById('bgStatusText').textContent = 'Ativo';
+            }
+        },
+        async saveCustomCSS(css) { await this.putAsset(STORAGE.CUSTOM_CSS, {css}); this.loadCustomCSS(); },
+        async loadCustomCSS() { 
+            const d = await this.getAsset(STORAGE.CUSTOM_CSS); 
+            if(d?.css) {
+                document.getElementById('custom-styles').textContent = d.css;
+                document.getElementById('customCssInput').value = d.css;
+            }
+        },
+        async saveDeckItem(item) { const db = await this.getDB(); db.transaction(['deck'],'readwrite').objectStore('deck').put(item); },
+        async getDeck() { const db = await this.getDB(); return new Promise(r => { const q = db.transaction(['deck'],'readonly').objectStore('deck').getAll(); q.onsuccess = () => r(q.result); }); },
+        async deleteDeckItem(id) { const db = await this.getDB(); db.transaction(['deck'],'readwrite').objectStore('deck').delete(id); }
+    }
+};
+
+const Utils = {
+    copy(btn) { navigator.clipboard.writeText(btn.closest('.msg-block').innerText); App.showToast("Copiado para a área de transferência"); },
+    speak(btn) { App.speakText(btn.closest('.msg-block').innerText.replace(/<[^>]*>?/gm, '')); },
+    edit(btn) {
+        const blk = btn.closest('.msg-block'); 
+        const txt = blk.innerText.replace("content_copy", "").trim(); 
+        document.getElementById('userInput').value = txt;
+        blk.remove();
+        App.speakText("Modo edição ativado");
+    }
+};
+
+function toggleDrawer(id) { document.getElementById(id).classList.toggle('open'); }
+window.onload = () => App.init();
+</script>
+<script>
+
+/**
+ * DUAL INFODOSE - KERNEL ONIPOTENTE v1.0
+ * Integração: Solar, Arquétipos de Voz e Hero Cards
+ */
+
+(function() {
+    const KERNEL_STORAGE = {
+        SOLAR_AUTO: 'KDX_SOLAR_AUTO',
+        HERO_CARDS: 'KDX_HERO_CARDS',
+        ACTIVE_ARCHETYPE: 'ARCHETYPE_ACTIVE'
+    };
+
+    const Kernel = {
+        state: {
+            solarMode: 'night',
+            isAuto: true,
+            activeVoice: 'Atlas'
+        },
+
+        async init() {
+            console.log("🚀 Kernel Onipotente Iniciado...");
+            
+            // 1. Iniciar Ciclo Solar Automático
+            this.setupSolar();
+            
+            // 2. Registrar Listener de Voz (Conectar com seu inline-7.js)
+            this.setupVoiceBridge();
+
+            // 3. Carregar Hero Cards salvos do IndexedDB
+            this.loadStoredCards();
+
+            // 4. Saudação Inicial baseada no seu script de vozes
+            this.bootSequence();
+        },
+
+        /* --- MÓDULO SOLAR --- */
+        setupSolar() {
+            const auto = localStorage.getItem(KERNEL_STORAGE.SOLAR_AUTO) !== 'false';
+            this.state.isAuto = auto;
+            
+            const update = () => {
+                if (!this.state.isAuto) return;
+                const h = new Date().getHours();
+                let mode = 'night';
+                if (h >= 6 && h < 17) mode = 'day';
+                else if (h >= 17 && h < 19) mode = 'sunset';
+                
+                document.body.className = document.body.className.replace(/mode-\w+/g, '');
+                document.body.classList.add(`mode-${mode}`);
+                this.state.solarMode = mode;
+                console.log(`[Solar] Sincronizado: ${mode}`);
+            };
+
+            update();
+            setInterval(update, 60000); // Checa a cada minuto
+        },
+
+        /* --- MÓDULO HERO CARDS (UPLOAD & ISOLAMENTO) --- */
+        async importHeroCard(htmlContent, title = "Novo Widget") {
+            const container = document.getElementById('hero-deck'); // Crie essa div no seu HTML
+            if (!container) {
+                console.warn("Crie uma div com id='hero-deck' para renderizar os cards.");
+                return;
+            }
+
+            const cardId = `hero_${Date.now()}`;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'hero-card-container';
+            wrapper.dataset.id = cardId;
+
+            // ISOLAMENTO TOTAL COM SHADOW DOM
+            const shadow = wrapper.attachShadow({ mode: 'open' });
+            
+            // Aqui injetamos o HTML do seu card de "Bom Dia" ou qualquer outro
+            shadow.innerHTML = `
+                <style>
+                    :host { display: block; margin-bottom: 15px; transition: all 0.3s; }
+                    .card-frame { 
+                        background: rgba(255,255,255,0.05); 
+                        backdrop-filter: blur(10px);
+                        border: 1px solid rgba(255,255,255,0.1);
+                        border-radius: 12px;
+                        padding: 15px;
+                    }
+                </style>
+                <div class="card-frame">
+                    ${htmlContent}
+                </div>
+            `;
+
+            container.prepend(wrapper);
+            
+            // Persistência no seu banco IndexedDB (aproveitando o que já temos no App.indexedDB)
+            if (window.App && App.indexedDB) {
+                await App.indexedDB.putAsset(cardId, { type: 'hero-card', data: htmlContent });
+            }
+        },
+
+        /* --- VOZ E ARQUÉTIPOS --- */
+        setupVoiceBridge() {
+            // Escuta mudanças de arquétipo para ajustar a personalidade do Kernel
+            window.addEventListener('storage', (e) => {
+                if (e.key === KERNEL_STORAGE.ACTIVE_ARCHETYPE) {
+                    this.state.activeVoice = e.newValue;
+                    console.log(`[Kernel] Voz alterada para: ${e.newValue}`);
+                }
+            });
+        },
+
+        bootSequence() {
+            setTimeout(() => {
+                const arch = localStorage.getItem(KERNEL_STORAGE.ACTIVE_ARCHETYPE) || 'Atlas';
+                const msg = `Kernel Onipotente Online. Modo Solar ${this.state.solarMode} ativo. Arquétipo ${arch} no controle.`;
+                
+                // Tenta usar a função de fala que já existe no seu projeto
+                if (window.App && App.announce) {
+                    App.announce(msg);
+                } else if (window.speakBlock) {
+                    // Fallback para o seu inline-7.js
+                    console.log(msg);
+                }
+            }, 2000);
+        },
+
+        async loadStoredCards() {
+            // Busca os cards salvos e renderiza no início
+            if (window.App && App.indexedDB) {
+                const deck = await App.indexedDB.getDeck();
+                const heroCards = deck.filter(i => i.id.startsWith('hero_'));
+                heroCards.forEach(c => this.importHeroCard(c.data));
+            }
+        }
+    };
+
+    // Expondo para o escopo global (Window)
+    window.DualKernel = Kernel;
+
+    // Auto-inicialização
+    window.addEventListener('DOMContentLoaded', () => Kernel.init());
+})();
+
+</script>
+</body>
+</html>
