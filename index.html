@@ -424,11 +424,11 @@ const App = {
         
         // Carregar Configs Básicas
         document.getElementById('apiKeyInput').value = s.getItem(STORAGE.API_KEY) || '';
-        document.getElementById('systemRoleInput').value = s.getItem(STORAGE.SYSTEM_ROLE) || 'Você é o Oráculo.';
+        document.getElementById('systemRoleInput').value = s.getItem(STORAGE.SYSTEM_ROLE) || 'Você é Dual';
         
         const savedUser = s.getItem(STORAGE.USER_ID) || 'Viajante';
         document.getElementById('inputUserId').value = savedUser;
-        document.getElementById('inputModel').value = s.getItem(STORAGE.MODEL) || 'google/gemini-2.0-flash-exp:free';
+        document.getElementById('inputModel').value = s.getItem(STORAGE.MODEL) || 'openai/gpt-oss-20b:free';
 
         // --- LÓGICA SOLAR CRÍTICA (Executa Primeiro) ---
         const savedAuto = s.getItem(STORAGE.SOLAR_AUTO);
@@ -609,11 +609,11 @@ const App = {
             this.addMessage('ai', aiTxt);
 
             // Lê o início da resposta se o chat estiver aberto
-            if (this.state.open) {
+          //  if (this.state.open) {
                 // Limita a leitura a 200 caracteres para não ficar cansativo
-                const speakChunk = aiTxt.length > 200 ? aiTxt.substring(0, 200) + "..." : aiTxt;
-                this.speakText(speakChunk);
-            }
+                //const speakChunk = aiTxt.length > 200 ? aiTxt.substring(0, 200) + "..." : aiTxt;
+                //this.speakText(speakChunk);
+            //}
 
         } catch (e) {
             this.announce("Falha na conexão.", true);
