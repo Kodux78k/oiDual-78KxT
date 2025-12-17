@@ -1,4 +1,4 @@
-const CACHE_NAME='infodose-chat-v1';
+const CACHE_NAME='infodose-kxt-v1';
 
 self.addEventListener('install',e=>{
   e.waitUntil(
