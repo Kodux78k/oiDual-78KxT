@@ -1013,5 +1013,348 @@ window.onload = () => App.init();
 })();
 
 </script>
+
+<!-- ========================================================
+     DUAL ENGINE v7 — RENDER + BACKGROUND + VIEWER + VOICE
+========================================================= -->
+
+<style>
+/* ===========================
+   BACKGROUND VIEWER
+=========================== */
+
+#bg-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 9999;
+  display: none;
+  flex-direction: column;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+#bg-viewer-overlay.active {
+  display: flex;
+}
+
+.bg-viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  color: #fff;
+  font-size: 1.2rem;
+}
+
+#bg-viewer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.bg-thumb {
+  width: 100%;
+  height: 90px;
+  border-radius: 8px;
+  cursor: pointer;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  border: 2px solid rgba(255,255,255,0.2);
+  transition: .2s;
+}
+
+.bg-thumb:hover {
+  border-color: var(--primary);
+}
+
+.bg-thumb .del-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255,0,0,0.7);
+  color:white;
+  border:none;
+  border-radius:4px;
+  cursor:pointer;
+  padding:2px 6px;
+}
+
+/* BASE RENDER STYLES (v6) */
+.msg-block {
+  max-width: 95%;
+  margin: 10px auto;
+  padding: 16px;
+  border-radius: 14px;
+  line-height: 1.55;
+  font-size: 0.96rem;
+  background: rgba(255,255,255,0.05);
+  animation: fadeIn .25s ease-out;
+}
+
+.msg-block.user { border-right:3px solid var(--primary); background:rgba(0,245,255,0.08); }
+.msg-block.ai { border-left:3px solid var(--secondary); }
+
+.msg-block.intro{ font-weight:600; border-color:#6ecfff; }
+.msg-block.middle{ opacity:.95; }
+.msg-block.ending{ font-style:italic; border-color:#ff72d1; }
+
+.msg-block table{width:100%;border-collapse:collapse;}
+.msg-block th,.msg-block td{border:1px solid rgba(255,255,255,0.12);padding:8px;}
+.msg-block th{background:rgba(255,255,255,0.08);font-weight:700;}
+
+pre code{display:block;background:rgba(0,0,0,0.55);padding:14px;border-radius:8px;overflow:auto;font-family:"JetBrains Mono";}
+
+code{background:rgba(255,255,255,0.09);padding:3px 5px;border-radius:5px;}
+
+.msg-tools{margin-top:8px;display:flex;gap:16px;}
+.block-btn{cursor:pointer;background:none;border:none;color:var(--primary);font-size:1.1rem;opacity:.75;}
+.block-btn:hover{opacity:1;transform:scale(1.15);}
+
+.msg-block .emoji-btn{cursor:pointer;display:inline-block;padding:2px 4px;border-radius:4px;}
+.msg-block .emoji-btn:hover{background:rgba(255,255,255,0.08);}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+</style>
+
+
+<script>
+/* ============================================================
+   BACKGROUND ENGINE v7
+   (multi, rotate, random, viewer visual, delete, pick, toggle)
+============================================================ */
+
+const BG_STORE = "KDX_BG_LIST";
+const BG_MODE = "KDX_BG_MODE";
+const BG_ENABLED = "KDX_BG_ENABLED";
+const BG_INDEX = "KDX_BG_INDEX";
+
+const BackgroundEngine = {
+
+  state:{
+    list:[],
+    enabled:true,
+    mode:"single",
+    index:0,
+    rotateTimer:null,
+    rotateInterval:15000
+  },
+
+  init(){
+    this.load();
+    this.apply();
+    this.bindViewer();
+  },
+
+  load(){
+    this.state.list = JSON.parse(localStorage.getItem(BG_STORE) || "[]");
+    this.state.enabled = localStorage.getItem(BG_ENABLED) !== "false";
+    this.state.mode = localStorage.getItem(BG_MODE) || "single";
+    this.state.index = parseInt(localStorage.getItem(BG_INDEX) || "0");
+  },
+
+  save(){
+    localStorage.setItem(BG_STORE, JSON.stringify(this.state.list));
+    localStorage.setItem(BG_ENABLED, this.state.enabled);
+    localStorage.setItem(BG_MODE, this.state.mode);
+    localStorage.setItem(BG_INDEX, this.state.index);
+  },
+
+  add(file){
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      this.state.list.push(reader.result);
+      this.save();
+      this.apply();
+    };
+    reader.readAsDataURL(file);
+  },
+
+  next(){
+    if(!this.state.list.length) return;
+    if(this.state.mode==="random"){
+      this.state.index = Math.floor(Math.random()*this.state.list.length);
+    } else {
+      this.state.index = (this.state.index+1)%this.state.list.length;
+    }
+    this.save();
+    this.apply();
+  },
+
+  toggle(){
+    this.state.enabled = !this.state.enabled;
+    this.save();
+    this.apply();
+  },
+
+  apply(){
+    const layer = document.getElementById("bg-layer-custom");
+    if(!this.state.enabled || !this.state.list.length){
+      layer.classList.remove("active");
+      return;
+    }
+
+    layer.style.backgroundImage = `url("${this.state.list[this.state.index]}")`;
+    layer.classList.add("active");
+  },
+
+  /* ===========================
+     VISUAL VIEWER
+  =========================== */
+  bindViewer(){
+    const body = document.body;
+
+    const overlay = document.createElement("div");
+    overlay.id = "bg-viewer-overlay";
+    overlay.innerHTML = `
+      <div class="bg-viewer-header">
+        <span>Background Viewer</span>
+        <button onclick="BackgroundEngine.hideViewer()">✖</button>
+      </div>
+      <div id="bg-viewer-grid"></div>
+    `;
+    body.appendChild(overlay);
+  },
+
+  showViewer(){
+    const grid = document.getElementById("bg-viewer-grid");
+    grid.innerHTML = "";
+
+    this.state.list.forEach((data,i)=>{
+      const div = document.createElement("div");
+      div.className="bg-thumb";
+      div.style.backgroundImage = `url("${data}")`;
+      div.onclick = ()=>{ this.state.index=i; this.save(); this.apply(); };
+      const del = document.createElement("button");
+      del.className="del-btn";
+      del.textContent="🗑";
+      del.onclick = (e)=>{
+        e.stopPropagation();
+        this.state.list.splice(i,1);
+        this.save();
+        this.apply();
+        this.showViewer();
+      };
+      div.appendChild(del);
+      grid.appendChild(div);
+    });
+
+    document.getElementById("bg-viewer-overlay").classList.add("active");
+  },
+
+  hideViewer(){
+    document.getElementById("bg-viewer-overlay").classList.remove("active");
+  }
+};
+
+
+/* ============================================================
+   RENDER ENGINE + TTS v6
+   (copy raw, copy html, full speak, emoji buttons)
+============================================================ */
+
+const Render = {
+
+  sanitize(t){
+    const d=document.createElement("div");
+    d.textContent=t; return d.innerHTML;
+  },
+
+  md(t){
+    return marked.parse(t,{gfm:true,breaks:true,headerIds:false,mangle:false});
+  },
+
+  split(t){
+    return t.split(/\n{2,}/);
+  },
+
+  emojify(html){
+    return html.replace(/([\u{1F300}-\u{1FAFF}])/gu,
+      `<span class="emoji-btn" onclick="Utils.emojiClick('$1')">$1</span>`
+    );
+  },
+
+  tools(raw,html){
+    return `
+      <div class="msg-tools">
+        <button class="block-btn" onclick="Utils.copyRaw(\`${raw.replace(/`/g,'\\`')}\`)">📄</button>
+        <button class="block-btn" onclick="Utils.copyHTML(\`${html.replace(/`/g,'\\`')}\`)">🔧</button>
+        <button class="block-btn" onclick="Utils.speakText(\`${raw.replace(/`/g,'\\`')}\`)">🔊</button>
+      </div>
+    `;
+  },
+
+  ai(text){
+    const c=document.getElementById("chat-container");
+    this.split(text).forEach((b,i)=>{
+      const div=document.createElement("div");
+      div.className=`msg-block ai ${
+        i===0?"intro":i===this.split(text).length-1?"ending":"middle"
+      }`;
+      const raw=this.sanitize(b);
+      const html=this.md(raw);
+      const em=this.emojify(html);
+      div.innerHTML=em+this.tools(b,html);
+      c.appendChild(div);
+    });
+    c.scrollTop=c.scrollHeight;
+  },
+
+  user(text){
+    const c=document.getElementById("chat-container");
+    const div=document.createElement("div");
+    div.className="msg-block user";
+    const raw=this.sanitize(text);
+    div.innerHTML=raw+this.tools(text,raw);
+    c.appendChild(div);
+    c.scrollTop=c.scrollHeight;
+  }
+};
+
+
+/* ============================================================
+   UTILS + VOICE
+============================================================ */
+
+window.Utils = {
+  copyRaw(md){ navigator.clipboard.writeText(md); },
+  copyHTML(h){ navigator.clipboard.writeText(h); },
+  speakText(t){ speechSynthesis.speak(new SpeechSynthesisUtterance(t)); },
+  emojiClick(e){ alert("Emoji: "+e); }
+};
+
+
+/* ============================================================
+   APP OVERRIDE + INIT TTS + VOICE RESPONSE
+============================================================ */
+
+if(window.App){
+
+  /* override render */
+  App.renderMsg = function(role,text){
+    if(role==="user") Render.user(text);
+    else Render.ai(text);
+  };
+
+  /* TTS inicial */
+  const oldInit = App.init;
+  App.init = async function(){
+    await oldInit.apply(this,arguments);
+    Utils.speakText("Sistema pronto.");
+    BackgroundEngine.init();
+  };
+
+  /* voz → resposta falada */
+  App.onVoiceComplete = function(text){
+    Render.user(text);
+    App.callAI(text).then(resp=>{
+      Render.ai(resp);
+      Utils.speakText(resp);
+    });
+  };
+}
+</script>
+
 </body>
 </html>
