@@ -1013,5 +1013,79 @@ window.onload = () => App.init();
 })();
 
 </script>
+
+<script>
+/* =========================================================
+   DUAL.INFODOSE — SPLIT INTELIGENTE v2
+   - Parágrafos → preferencial
+   - Headings → markdown-aware
+   - Pontuação → semântico
+   - Fallback → 40/35/25
+========================================================= */
+
+(function() {
+
+  const originalAdd = App.addMessage;
+
+  App.addMessage = function(role, text) {
+    // não dividir user/system
+    if (role !== 'ai') {
+      return originalAdd.call(this, role, text);
+    }
+
+    let t = text.trim();
+    let blocks = [];
+
+    // 1) Split por parágrafos duplos
+    blocks = t.split(/\n{2,}/);
+
+    // 2) Se insuficiente, headings markdown
+    if (blocks.length < 3) {
+      blocks = t.split(/(?=^#{1,6}\s)/m);
+    }
+
+    // 3) Se ainda insuficiente, pontuação + maiúscula
+    if (blocks.length < 3) {
+      blocks = t.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕ])/);
+    }
+
+    // 4) Fallback: 3 blocos proporcionais
+    if (blocks.length < 3 && t.length > 600) {
+      blocks = [
+        t.slice(0, t.length * 0.40),
+        t.slice(t.length * 0.40, t.length * 0.75),
+        t.slice(t.length * 0.75)
+      ];
+    }
+
+    // 5) Sanitizar
+    blocks = blocks
+      .map(b => b.trim())
+      .filter(b => b.length > 0);
+
+    // 6) Se sobrou 1 bloco, processa normal
+    if (blocks.length <= 1) {
+      return originalAdd.call(this, role, t);
+    }
+
+    // 7) Renderizar cada bloco
+    blocks.forEach((block, i) => {
+      const isFirst = (i === 0);
+      const isLast = (i === blocks.length - 1);
+
+      // injeta etiquetas simbióticas opcionais
+      let symbolic = block;
+
+      if (isFirst) symbolic = `⚡ INÍCIO\n\n${block}`;
+      else if (isLast) symbolic = `${block}\n\n🔮 FIM`;
+      else symbolic = `🌒 ${block}`;
+
+      // renderização original
+      originalAdd.call(this, role, symbolic);
+    });
+  };
+
+})();
+</script>
 </body>
 </html>
