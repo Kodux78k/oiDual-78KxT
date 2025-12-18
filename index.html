@@ -1266,7 +1266,7 @@ const Render = {
   },
 
   split(t){
-  let blocks = t.split(/\n{2,}/);
+  let blocks = t.split(/\n{3,}/);
 
   if(blocks.length < 3){
     blocks = t.split(/(?=^#{1,6}\s)/m);
@@ -1276,7 +1276,7 @@ const Render = {
     blocks = t.split(/(?<=[.!?])\s+(?=[A-Z])/);
   }
 
-  if(blocks.length < 3 && t.length > 600){
+  if(blocks.length < 3 && t.length > 96){
     blocks = [
       t.slice(0, t.length * 0.40),
       t.slice(t.length * 0.40, t.length * 0.75),
