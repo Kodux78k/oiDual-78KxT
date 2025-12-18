@@ -609,11 +609,11 @@ const App = {
             this.addMessage('ai', aiTxt);
 
             // Lê o início da resposta se o chat estiver aberto
-          //  if (this.state.open) {
+            if (this.state.open) {
                 // Limita a leitura a 200 caracteres para não ficar cansativo
-                //const speakChunk = aiTxt.length > 200 ? aiTxt.substring(0, 200) + "..." : aiTxt;
-                //this.speakText(speakChunk);
-            //}
+               const speakChunk = aiTxt.length > 369 ? aiTxt.substring(0, 369) + "..." : aiTxt;
+                this.speakText(speakChunk);
+            }
 
         } catch (e) {
             this.announce("Falha na conexão.", true);
