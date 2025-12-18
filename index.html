@@ -1266,8 +1266,26 @@ const Render = {
   },
 
   split(t){
-    return t.split(/\n{2,}/);
-  },
+  let blocks = t.split(/\n{2,}/);
+
+  if(blocks.length < 3){
+    blocks = t.split(/(?=^#{1,6}\s)/m);
+  }
+
+  if(blocks.length < 3){
+    blocks = t.split(/(?<=[.!?])\s+(?=[A-Z])/);
+  }
+
+  if(blocks.length < 3 && t.length > 600){
+    blocks = [
+      t.slice(0, t.length * 0.40),
+      t.slice(t.length * 0.40, t.length * 0.75),
+      t.slice(t.length * 0.75)
+    ];
+  }
+
+  return blocks.filter(b => b.trim().length);
+}
 
   emojify(html){
     return html.replace(/([\u{1F300}-\u{1FAFF}])/gu,
