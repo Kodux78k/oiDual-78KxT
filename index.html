@@ -372,21 +372,36 @@
     </div>
   </div>
 
- <script>
-  /* =========================================================
-   DUAL.INFODOSE v5.0 — AUTO SOLAR & VOICE FIX
-   - Voz habilitada para Mobile
-   - Tema Automático na inicialização
-   - Saudação de Boas-Vindas Falada
-   - Footer Interativo com Voz
+<script>
+/* =========================================================
+   DUAL.INFODOSE v5.1 — KOBΦ VOICE FIX + ADVANCED DOWNLOADS
+   Atualizado: sincronização de tema automático corrigida
+   CHAVES MIGRADAS → di_ system
 ========================================================= */
 
 const STORAGE = {
-    API_KEY: 'KDX_API_KEY', MODEL: 'KDX_MODEL', 
-    SYSTEM_ROLE: 'KDX_SYSTEM_ROLE', USER_ID: 'KDX_USER_ID', 
-    BG_IMAGE: 'KDX_BG_IMAGE', CUSTOM_CSS: 'KDX_CUSTOM_CSS', 
-    SOLAR_MODE: 'KDX_SOLAR_MODE', SOLAR_AUTO: 'KDX_SOLAR_AUTO'
+    USER_NAME: 'di_userName',
+    API_KEY: 'di_apiKey',
+    MODEL: 'di_modelName',
+
+    SYSTEM_ROLE: 'di_trainingText',
+    TRAINING_FILE: 'di_trainingFileName',
+
+    ASSISTANT_ENABLED: 'di_assistantEnabled',
+    TRAINING_ACTIVE: 'di_trainingActive',
+
+    INFODOSE_NAME: 'di_infodoseName',
+
+    CONVERSATION: 'di_conversation',
+    CRISTALIZADOS: 'di_cristalizados',
+
+    // opcionais / expansão
+    BG_IMAGE: 'di_bgImage',
+    CUSTOM_CSS: 'di_customCss',
+    SOLAR_MODE: 'di_solarMode',
+    SOLAR_AUTO: 'di_solarAuto'
 };
+
 
 const FOOTER_TEXTS = {
     closed: { 
@@ -415,87 +430,160 @@ const App = {
         open: false, 
         messages: [], 
         isAutoSolar: true, 
-        solarMode: 'night',
-        isProcessing: false 
+        solarMode: null, // <-- inicializado como null para forçar sync inicial
+        isProcessing: false,
+        isListening: false,
+        recognition: null 
     },
     
     init() {
         const s = localStorage;
-        
-        // Carregar Configs Básicas
         document.getElementById('apiKeyInput').value = s.getItem(STORAGE.API_KEY) || '';
         document.getElementById('systemRoleInput').value = s.getItem(STORAGE.SYSTEM_ROLE) || 'Você é Dual';
         
-        const savedUser = s.getItem(STORAGE.USER_ID) || 'Viajante';
+        const savedUser = s.getItem(STORAGE.USER_NAME) || 'Viajante';
         document.getElementById('inputUserId').value = savedUser;
-        document.getElementById('inputModel').value = s.getItem(STORAGE.MODEL) || 'openai/gpt-oss-20b:free';
+        document.getElementById('inputModel').value = s.getItem(STORAGE.MODEL) || 'arcee-ai/trinity-mini:free';
 
-        // --- LÓGICA SOLAR CRÍTICA (Executa Primeiro) ---
         const savedAuto = s.getItem(STORAGE.SOLAR_AUTO);
         this.state.isAutoSolar = savedAuto === 'false' ? false : true;
         
-        // Aplica o tema imediatamente antes de renderizar o resto
-        if (this.state.isAutoSolar) {
-            this.autoByTime();
-        } else {
-            this.setMode(s.getItem(STORAGE.SOLAR_MODE) || 'night');
-        }
+        // remove qualquer classe de modo pré-injetada (evita mismatch visual no boot)
+        document.body.classList.remove('mode-day','mode-sunset','mode-night');
 
-        // Carregar Assets Visuais
+        if (this.state.isAutoSolar) this.autoByTime();
+        else this.setMode(s.getItem(STORAGE.SOLAR_MODE) || 'night');
+
         this.indexedDB.loadCustomCSS();
         this.indexedDB.loadBackground();
-
-        // Iniciar Eventos e UI
+        this.setupVoiceSystem();
         this.bindEvents();
         this.updateUI();
-        this.toggleField(false, true); // Fecha o campo silenciosamente no início
+        this.toggleField(false, true); 
         this.renderDeck();
         
-        // --- SAUDAÇÃO DE BOAS-VINDAS ---
         setTimeout(() => {
             const h = new Date().getHours();
             let greeting = "Bem-vindo de volta";
-            
             if (h >= 5 && h < 12) greeting = "Bom dia";
             else if (h >= 12 && h < 18) greeting = "Boa tarde";
             else greeting = "Boa noite";
-
-            // Dispara Toast e Voz
             this.announce(`Dual Infodose Online. ${greeting}, ${savedUser}.`);
-        }, 1200); // Pequeno delay para garantir carregamento total
+        }, 1200);
 
-        // Iniciar Partículas
         if(typeof particlesJS !== 'undefined') particlesJS('particles-js', {particles:{number:{value:30},color:{value:"#ffffff"},opacity:{value:0.5},size:{value:2},line_linked:{enable:true,distance:150,color:"#ffffff",opacity:0.2,width:1}}});
     },
 
-    /* --- SISTEMA DE VOZ (TTS) --- */
+    setupVoiceSystem() {
+        if (!('webkitSpeechRecognition' in window)) {
+            console.warn("Voz não suportada neste navegador.");
+            return;
+        }
+        const recognition = new webkitSpeechRecognition();
+        recognition.lang = 'pt-BR';
+        recognition.continuous = true; 
+        recognition.interimResults = true;
+
+        recognition.onstart = () => {
+            this.state.isListening = true;
+            document.getElementById('btnVoice').classList.add('listening');
+            this.showToast("Canal de voz aberto. Fale...");
+        };
+        recognition.onend = () => {
+            this.state.isListening = false;
+            document.getElementById('btnVoice').classList.remove('listening');
+        };
+        recognition.onresult = (event) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+                else finalTranscript += event.results[i][0].transcript;
+            }
+            document.getElementById('userInput').value = finalTranscript;
+        };
+        recognition.onerror = (event) => {
+            console.error("Erro voz:", event.error);
+            this.state.isListening = false;
+            document.getElementById('btnVoice').classList.remove('listening');
+            if(event.error === 'no-speech') this.showToast("Nenhum som detectado.");
+        };
+        this.state.recognition = recognition;
+    },
+
+    toggleVoice() {
+        if (!this.state.recognition) {
+            alert("Voz não suportada ou não inicializada.");
+            return;
+        }
+        if (this.state.isListening) this.state.recognition.stop();
+        else {
+            document.getElementById('userInput').value = ''; 
+            try { this.state.recognition.start(); } catch (e) { console.error("Erro ao iniciar voz:", e); }
+        }
+    },
+
+    setupFileUpload() {
+        const input = document.getElementById('fileUploadInput');
+        const preview = document.getElementById('filePreview');
+        const btn = document.getElementById('btnUploadFile');
+        btn.onclick = () => input.click();
+        
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const info = preview.querySelector('.file-info span');
+            const actions = preview.querySelector('.file-actions');
+            info.textContent = `${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
+            preview.classList.add('active');
+            actions.innerHTML = `
+                <button class="btn-preview" onclick="App.cancelUpload()">✕</button>
+                <button class="btn-preview primary" onclick="App.confirmUpload('${file.name}')">Assimilar</button>
+            `;
+        };
+    },
+
+    cancelUpload() {
+        const p = document.getElementById('filePreview');
+        p.classList.remove('active');
+        document.getElementById('fileUploadInput').value = '';
+    },
+
+    confirmUpload(fileName) {
+        const file = document.getElementById('fileUploadInput').files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            this.addMessage('system', `Memória assimilada: ${fileName}`);
+            this.state.messages.push({
+                role: 'user', 
+                content: `[SISTEMA DE ARQUIVO: ${fileName}]\n\n${content}\n\n[FIM DO ARQUIVO]`
+            });
+            this.announce("Arquivo lido e correlacionado.");
+            this.cancelUpload();
+        };
+        if (file.type.startsWith('image')) {
+             this.addMessage('system', `Imagem detectada (metadados): ${fileName}`);
+             this.cancelUpload();
+        } else {
+            reader.readAsText(file);
+        }
+    },
+
     speakText(text) {
         if (!text) return;
-        
-        // Cancela falas anteriores para evitar sobreposição (bug dos doces)
         window.speechSynthesis.cancel(); 
-
         const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'pt-BR'; 
-        u.rate = 1.1; // Velocidade levemente ajustada
-        u.pitch = 1.0;
-        
-        // Força a fala (obs: requer interação do usuário no Chrome para funcionar 100% na primeira vez)
+        u.lang = 'pt-BR'; u.rate = 1.1; 
         window.speechSynthesis.speak(u);
     },
+    announce(text, isError = false) { this.showToast(text, isError); },
 
-    announce(text, isError = false) {
-        this.showToast(text, isError);
-        // O showToast já chama o speakText internamente
-    },
-
-    /* --- CRISTALIZAÇÃO (DECK) --- */
     async crystallizeSession() {
         if(this.state.messages.length === 0) {
             this.announce("O vazio não pode ser cristalizado.", true);
             return;
         }
-
         const title = this.state.messages.find(m => m.role === 'user')?.content || "Memória Sem Nome";
         const crystal = {
             id: Date.now(),
@@ -503,11 +591,9 @@ const App = {
             title: title.substring(0, 25) + (title.length>25 ? "..." : ""),
             data: [...this.state.messages]
         };
-
         await this.indexedDB.saveDeckItem(crystal);
         this.renderDeck();
         this.announce("Memória Cristalizada.");
-        
         const d = document.getElementById('drawerDeck');
         if(!d.classList.contains('open')) toggleDrawer('drawerDeck');
     },
@@ -515,12 +601,10 @@ const App = {
     async renderDeck() {
         const items = await this.indexedDB.getDeck();
         const container = document.getElementById('deckList');
-        
         if(!items || items.length === 0) {
             container.innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:20px">O vazio reina aqui.<br>Use o botão 💎 para salvar.</div>';
             return;
         }
-
         container.innerHTML = items.sort((a,b) => b.id - a.id).map(item => `
             <div class="deck-item">
                 <div class="deck-info">
@@ -554,18 +638,15 @@ const App = {
         this.announce("Fragmentos dispersos.");
     },
 
-    /* --- LÓGICA DE ENVIO (CHAT) --- */
     async handleSend() {
         const input = document.getElementById('userInput');
         const txt = input.value.trim();
-        
         if (!txt || this.state.isProcessing) return;
         
         input.value = '';
         this.addMessage('user', txt);
         this.state.isProcessing = true;
         
-        // Feedback no Footer + Voz de Carregamento
         const footerHandle = document.getElementById('field-toggle-handle');
         const loadTxt = getRandomText(FOOTER_TEXTS.loading);
         footerHandle.innerHTML = `<span class="footer-dot pulse" style="background:var(--primary)"></span> ${loadTxt}`;
@@ -577,7 +658,6 @@ const App = {
         if (!key && !model.includes(':free')) {
             this.announce("Erro: API Key necessária.", true);
             this.state.isProcessing = false;
-            this.toggleField(true, true); // Reabre sem falar
             return;
         }
 
@@ -608,31 +688,92 @@ const App = {
             const aiTxt = data.choices?.[0]?.message?.content || "Sem sinal.";
             this.addMessage('ai', aiTxt);
 
-            // Lê o início da resposta se o chat estiver aberto
-            if (this.state.open) {
-                // Limita a leitura a 200 caracteres para não ficar cansativo
-               const speakChunk = aiTxt.length > 369 ? aiTxt.substring(0, 369) + "..." : aiTxt;
-                this.speakText(speakChunk);
-            }
-
         } catch (e) {
             this.announce("Falha na conexão.", true);
             this.addMessage('system', `Erro: ${e.message}`);
         } finally {
             document.body.classList.remove('loading');
             this.state.isProcessing = false; 
-            // Atualiza o footer para estado estável
             this.toggleField(this.state.open, true);
         }
     },
 
-    /* --- LÓGICA SOLAR (AUTO & MANUAL) --- */
+    // --- NOVA FUNÇÃO ADDMESSAGE (com suporte a dataset.raw e ícones SVG)
+    addMessage(role, text) {
+        const c = document.getElementById('chat-container');
+        const d = document.createElement('div');
+        d.className = `msg-block ${role}`;
+        d.dataset.raw = text || '';
+
+        let html = role === 'ai' ? marked.parse(text) : text.replace(/\n/g, '<br>');
+        
+        if(role !== 'system') {
+            html += `<div class="msg-tools">
+                <button class="tool-btn" onclick="Utils.copy(this)" title="Copiar"><svg><use href="#icon-copy"></use></svg></button>
+                <button class="tool-btn" onclick="Utils.speak(this)" title="Ouvir"><svg><use href="#icon-mic"></use></svg></button>
+                ${role === 'user' ? `<button class="tool-btn" onclick="Utils.edit(this)" title="Editar"><svg><use href="#icon-edit"></use></svg></button>` : ''}
+                ${role === 'ai' ? `
+                  <button class="tool-btn" onclick="DownloadUtils.downloadMessage(this)" title="Download bruto"><svg><use href="#icon-download"></use></svg></button>
+                  <button class="tool-btn" onclick="DownloadUtils.openSandbox(this)" title="Abrir sandbox"><svg><use href="#icon-sandbox"></use></svg></button>
+                  <button class="tool-btn" onclick="DownloadUtils.exportPdf(this)" title="Exportar PDF"><svg><use href="#icon-pdf"></use></svg></button>
+                  <button class="tool-btn" onclick="DownloadUtils.downloadMarkdown(this)" title="Salvar como .md"><svg><use href="#icon-md"></use></svg></button>
+                ` : ''}
+            </div>`;
+            this.state.messages.push({ role: role==='ai'?'assistant':'user', content: text });
+        }
+        
+        d.innerHTML = html;
+        
+        if (role === 'ai') {
+            const codeBlocks = d.querySelectorAll('pre');
+            codeBlocks.forEach(pre => {
+                const btn = document.createElement('button');
+                btn.className = 'copy-code-btn';
+                btn.textContent = 'Copiar Código';
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const code = pre.querySelector('code').innerText;
+                    navigator.clipboard.writeText(code);
+                    btn.textContent = 'Copiado!';
+                    btn.style.color = '#00ff00';
+                    setTimeout(() => { btn.textContent = 'Copiar Código'; btn.style.color = ''; }, 2000);
+                };
+                pre.appendChild(btn);
+            });
+        }
+        
+        c.appendChild(d);
+        c.scrollTop = c.scrollHeight;
+    },
+
     setMode(mode) {
         this.state.solarMode = mode;
         document.body.classList.remove('mode-day', 'mode-sunset', 'mode-night');
         document.body.classList.add(`mode-${mode}`);
         localStorage.setItem(STORAGE.SOLAR_MODE, mode);
+        // sincroniza camadas visuais (sol, partículas, background)
+        this.syncVisuals(mode);
         this.updateUI();
+    },
+
+    // centraliza ajustes visuais para evitar duplicação
+    syncVisuals(mode) {
+        const sun = document.querySelector('.sun-background');
+        const particles = document.getElementById('particles-js');
+        const bg = document.getElementById('bg-fake-custom');
+        if (sun) {
+            if (mode === 'day') sun.style.opacity = '0.5';
+            else if (mode === 'sunset') sun.style.opacity = '0.4';
+            else sun.style.opacity = '0';
+        }
+        if (particles) {
+            if (mode === 'day') particles.style.opacity = '0.1';
+            else particles.style.opacity = '0.3';
+        }
+        if (bg) {
+            if (mode === 'day') bg.style.opacity = '0.15';
+            else bg.style.opacity = '0.2';
+        }
     },
     
     cycleSolar() {
@@ -641,7 +782,6 @@ const App = {
         if (this.state.solarMode === 'day') this.setMode('sunset');
         else if (this.state.solarMode === 'sunset') this.setMode('night');
         else this.setMode('day');
-        
         this.announce(`Modo ${this.translateMode(this.state.solarMode)}`);
     },
 
@@ -654,19 +794,14 @@ const App = {
 
     autoByTime() {
         if (!this.state.isAutoSolar) return;
-        
         const h = new Date().getHours();
-        let m = 'night'; // Default Noite
+        let m = 'night';
+        if (h >= 6 && h < 17) m = 'day';
+        else if (h >= 17 && h < 19) m = 'sunset';
+        else m = 'night';
 
-        if (h >= 6 && h < 17) m = 'day';           // 06:00 as 16:59 -> Dia
-        else if (h >= 17 && h < 19) m = 'sunset';  // 17:00 as 18:59 -> Pôr do Sol
-        else m = 'night';                          // 19:00 as 05:59 -> Noite
-
-        if (this.state.solarMode !== m) {
-            this.setMode(m);
-        } else {
-            this.updateUI();
-        }
+        // sempre aplica o modo (corrige mismatch entre state e classe do body)
+        this.setMode(m);
     },
 
     translateMode(m) {
@@ -675,7 +810,6 @@ const App = {
         return 'NOITE';
     },
 
-    /* --- UI GERAL & FOOTER --- */
     toggleField(forceState, silent = false) {
         const isOpen = forceState !== undefined ? forceState : !this.state.open;
         this.state.open = isOpen;
@@ -693,31 +827,8 @@ const App = {
         const handle = document.getElementById('field-toggle-handle');
         handle.innerHTML = `<span class="footer-dot"></span> ${text}`;
         
-        // Se NÃO for silencioso (clique do usuário), fala o texto do footer
         if (!silent) this.speakText(text);
-        
         if (isOpen) chat.scrollTop = chat.scrollHeight;
-    },
-
-    addMessage(role, text) {
-        const c = document.getElementById('chat-container');
-        const d = document.createElement('div');
-        d.className = `msg-block ${role}`;
-        
-        let html = role === 'ai' ? marked.parse(text) : text.replace(/\n/g, '<br>');
-        
-        if(role !== 'system') {
-            html += `<div class="msg-tools">
-                <button class="tool-btn" onclick="Utils.copy(this)"><svg><use href="#icon-copy"></use></svg></button>
-                <button class="tool-btn" onclick="Utils.speak(this)"><svg><use href="#icon-mic"></use></svg></button>
-                ${role === 'user' ? `<button class="tool-btn" onclick="Utils.edit(this)"><svg><use href="#icon-edit"></use></svg></button>` : ''}
-            </div>`;
-            this.state.messages.push({ role: role==='ai'?'assistant':'user', content: text });
-        }
-        
-        d.innerHTML = html;
-        c.appendChild(d);
-        c.scrollTop = c.scrollHeight;
     },
 
     updateUI() {
@@ -729,28 +840,22 @@ const App = {
         
         label.textContent = `${this.translateMode(m)} ${auto ? '(AUTO)' : '(MANUAL)'}`;
         label.style.color = auto ? 'var(--primary)' : 'orange';
-        
         ind.textContent = `SISTEMA: ${this.translateMode(m)} // ${auto ? 'SYNC' : 'OVERRIDE'}`;
         btnAuto.style.opacity = auto ? '1' : '0.5';
         document.getElementById('usernameDisplay').textContent = document.getElementById('inputUserId').value;
     },
 
-    /* --- EVENTOS --- */
     bindEvents() {
         document.getElementById('btnSend').onclick = () => this.handleSend();
         document.getElementById('userInput').onkeypress = (e) => { if(e.key==='Enter') this.handleSend(); };
-        
-        // Footer agora fala ao ser clicado (silent = false)
         document.getElementById('field-toggle-handle').onclick = () => this.toggleField(undefined, false);
-        
         document.getElementById('orbToggle').onclick = () => { toggleDrawer('drawerProfile'); this.speakText("Cockpit Solar"); };
         document.getElementById('btnCrystallize').onclick = () => this.crystallizeSession();
-
         document.getElementById('btnCycleSolar').onclick = () => this.cycleSolar();
         document.getElementById('btnAutoSolar').onclick = () => { this.enableAutoSolar(); this.updateUI(); };
-
+        
         document.getElementById('inputUserId').onchange = (e) => {
-            localStorage.setItem(STORAGE.USER_ID, e.target.value);
+            localStorage.setItem(STORAGE.USER_NAME, e.target.value);
             this.updateUI();
             this.announce(`Identidade redefinida: ${e.target.value}`);
         };
@@ -773,26 +878,9 @@ const App = {
         document.getElementById('btnSettings').onclick = () => toggleDrawer('drawerSettings');
         document.getElementById('btnDeck').onclick = () => toggleDrawer('drawerDeck');
         document.getElementById('btnClearCss').onclick = () => this.indexedDB.clearAsset(STORAGE.CUSTOM_CSS);
+        document.getElementById('btnVoice').onclick = () => this.toggleVoice();
         
-        document.getElementById('btnVoice').onclick = () => this.startVoice();
-    },
-    
-    startVoice() {
-        if (!('webkitSpeechRecognition' in window)) return alert("Navegador sem suporte a voz");
-        const r = new webkitSpeechRecognition();
-        r.lang = 'pt-BR';
-        r.onstart = () => {
-            document.getElementById('btnVoice').classList.add('listening');
-            this.showToast("Ouvindo..."); // Feedback visual e sonoro
-        };
-        r.onend = () => document.getElementById('btnVoice').classList.remove('listening');
-        r.onresult = (e) => { 
-            const txt = e.results[0][0].transcript;
-            document.getElementById('userInput').value = txt;
-            this.speakText(`Entendido: ${txt}`);
-            setTimeout(() => this.handleSend(), 1000);
-        };
-        r.start();
+        this.setupFileUpload();
     },
 
     showToast(msg, isError = false) {
@@ -801,12 +889,9 @@ const App = {
         t.style.borderLeft = isError ? '4px solid #ff4444' : '4px solid var(--primary)';
         t.classList.add('show');
         setTimeout(() => t.classList.remove('show'), 3000);
-        
-        // Garante a fala do Toast
         this.speakText(msg);
     },
 
-    /* --- INDEXEDDB (Armazenamento Local) --- */
     indexedDB: {
         dbName: "InfodoseDB",
         async getDB() {
@@ -866,152 +951,123 @@ const Utils = {
     }
 };
 
+// --- DOWNLOAD UTILS ATUALIZADO (SVG + PDF SCALE + MARKDOWN) ---
+const DownloadUtils = {
+  _getBlock(btn) { return btn.closest('.msg-block'); },
+
+  _getCleanHtml(block) {
+    const clone = block.cloneNode(true);
+    const tools = clone.querySelector('.msg-tools');
+    if (tools) tools.remove();
+    return clone.innerHTML;
+  },
+
+  _guessFilename(base, extFallback='txt') {
+    const t = new Date().toISOString().replace(/[:.]/g,'-');
+    if (!base) return `ai-output-${t}.${extFallback}`;
+    if (/<\s*!doctype|<html|<body|<head/i.test(base)) return `ai-output-${t}.html`;
+    if (/<pre|<code/i.test(base)) return `ai-code-${t}.${extFallback}`;
+    return `ai-output-${t}.${extFallback}`;
+  },
+
+  downloadMessage(btn) {
+    try {
+      const block = this._getBlock(btn);
+      if(!block) return;
+      const content = this._getCleanHtml(block);
+      const isHTML = /<\s*!doctype|<html|<body|<head|<\/div>/i.test(content);
+      const mime = isHTML ? 'text/html' : 'text/plain';
+      const ext = isHTML ? 'html' : 'txt';
+      const filename = this._guessFilename(content, ext);
+      const blob = new Blob([content], { type: mime + ';charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      App.showToast(`Download iniciado: ${filename}`);
+    } catch (e) {
+      console.error(e);
+      App.showToast('Erro ao gerar download', true);
+    }
+  },
+
+  downloadMarkdown(btn) {
+    try {
+      const block = this._getBlock(btn);
+      if(!block) return;
+      const raw = block.dataset.raw || block.innerText || '';
+      const filename = this._guessFilename(raw, 'md').replace(/\.(html|txt)$/, '.md');
+      const blob = new Blob([raw], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      App.showToast(`Markdown salvo: ${filename}`);
+    } catch (e) {
+      console.error(e);
+      App.showToast('Erro ao salvar .md', true);
+    }
+  },
+
+  openSandbox(btn) {
+    try {
+      const block = this._getBlock(btn);
+      if(!block) return;
+      const content = this._getCleanHtml(block);
+      let page = content;
+      if(!/<\s*!doctype|<html/i.test(content)) {
+        page = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sandbox - AI Output</title></head><body>${content}</body></html>`;
+      }
+      const blob = new Blob([page], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      App.showToast('Sandbox aberto em nova aba');
+    } catch (e) {
+      console.error(e);
+      App.showToast('Erro ao abrir sandbox', true);
+    }
+  },
+
+  async exportPdf(btn) {
+    try {
+      if(typeof html2pdf === 'undefined') {
+        App.showToast('Biblioteca PDF indisponível. Abrindo sandbox...', true);
+        return this.openSandbox(btn);
+      }
+      const block = this._getBlock(btn);
+      if(!block) return;
+      const content = this._getCleanHtml(block);
+
+      const container = document.createElement('div');
+      container.style.position = 'fixed'; container.style.left = '-9999px'; container.style.top = '0';
+      container.style.width = '1100px'; container.style.padding = '20px'; container.style.background = '#ffffff';
+      container.innerHTML = content;
+      document.body.appendChild(container);
+
+      const orientation = (container.scrollWidth > container.scrollHeight) ? 'landscape' : 'portrait';
+      const filename = this._guessFilename(content, 'pdf').replace(/\.(html|txt)$/, '.pdf');
+
+      await html2pdf().from(container).set({
+        margin: [12, 12, 12, 12],
+        filename: filename,
+        html2canvas: { scale: 3, useCORS: true, logging: false },
+        jsPDF: { unit: 'pt', format: 'a4', orientation: orientation }
+      }).save();
+
+      document.body.removeChild(container);
+      App.showToast(`PDF gerado: ${filename}`);
+    } catch (e) {
+      console.error(e);
+      App.showToast('Falha ao gerar PDF. Abrindo sandbox...', true);
+      this.openSandbox(btn);
+    }
+  }
+};
+
 function toggleDrawer(id) { document.getElementById(id).classList.toggle('open'); }
 window.onload = () => App.init();
-</script>
-<script>
-
-/**
- * DUAL INFODOSE - KERNEL ONIPOTENTE v1.0
- * Integração: Solar, Arquétipos de Voz e Hero Cards
- */
-
-(function() {
-    const KERNEL_STORAGE = {
-        SOLAR_AUTO: 'KDX_SOLAR_AUTO',
-        HERO_CARDS: 'KDX_HERO_CARDS',
-        ACTIVE_ARCHETYPE: 'ARCHETYPE_ACTIVE'
-    };
-
-    const Kernel = {
-        state: {
-            solarMode: 'night',
-            isAuto: true,
-            activeVoice: 'Atlas'
-        },
-
-        async init() {
-            console.log("🚀 Kernel Onipotente Iniciado...");
-            
-            // 1. Iniciar Ciclo Solar Automático
-            this.setupSolar();
-            
-            // 2. Registrar Listener de Voz (Conectar com seu inline-7.js)
-            this.setupVoiceBridge();
-
-            // 3. Carregar Hero Cards salvos do IndexedDB
-            this.loadStoredCards();
-
-            // 4. Saudação Inicial baseada no seu script de vozes
-            this.bootSequence();
-        },
-
-        /* --- MÓDULO SOLAR --- */
-        setupSolar() {
-            const auto = localStorage.getItem(KERNEL_STORAGE.SOLAR_AUTO) !== 'false';
-            this.state.isAuto = auto;
-            
-            const update = () => {
-                if (!this.state.isAuto) return;
-                const h = new Date().getHours();
-                let mode = 'night';
-                if (h >= 6 && h < 17) mode = 'day';
-                else if (h >= 17 && h < 19) mode = 'sunset';
-                
-                document.body.className = document.body.className.replace(/mode-\w+/g, '');
-                document.body.classList.add(`mode-${mode}`);
-                this.state.solarMode = mode;
-                console.log(`[Solar] Sincronizado: ${mode}`);
-            };
-
-            update();
-            setInterval(update, 600000); // Checa a cada minuto
-        },
-
-        /* --- MÓDULO HERO CARDS (UPLOAD & ISOLAMENTO) --- */
-        async importHeroCard(htmlContent, title = "Novo Widget") {
-            const container = document.getElementById('hero-deck'); // Crie essa div no seu HTML
-            if (!container) {
-                console.warn("Crie uma div com id='hero-deck' para renderizar os cards.");
-                return;
-            }
-
-            const cardId = `hero_${Date.now()}`;
-            const wrapper = document.createElement('div');
-            wrapper.className = 'hero-card-container';
-            wrapper.dataset.id = cardId;
-
-            // ISOLAMENTO TOTAL COM SHADOW DOM
-            const shadow = wrapper.attachShadow({ mode: 'open' });
-            
-            // Aqui injetamos o HTML do seu card de "Bom Dia" ou qualquer outro
-            shadow.innerHTML = `
-                <style>
-                    :host { display: block; margin-bottom: 39px; transition: all 0.3s; }
-                    .card-frame { 
-                        background: rgba(255,255,255,0.05); 
-                        backdrop-filter: blur(10px);
-                        border: 1px solid rgba(255,255,255,0.1);
-                        border-radius: 12px;
-                        padding: 15px;
-                    }
-                </style>
-                <div class="card-frame">
-                    ${htmlContent}
-                </div>
-            `;
-
-            container.prepend(wrapper);
-            
-            // Persistência no seu banco IndexedDB (aproveitando o que já temos no App.indexedDB)
-            if (window.App && App.indexedDB) {
-                await App.indexedDB.putAsset(cardId, { type: 'hero-card', data: htmlContent });
-            }
-        },
-
-        /* --- VOZ E ARQUÉTIPOS --- */
-        setupVoiceBridge() {
-            // Escuta mudanças de arquétipo para ajustar a personalidade do Kernel
-            window.addEventListener('storage', (e) => {
-                if (e.key === KERNEL_STORAGE.ACTIVE_ARCHETYPE) {
-                    this.state.activeVoice = e.newValue;
-                    console.log(`[Kernel] Voz alterada para: ${e.newValue}`);
-                }
-            });
-        },
-
-        bootSequence() {
-            setTimeout(() => {
-                const arch = localStorage.getItem(KERNEL_STORAGE.ACTIVE_ARCHETYPE) || 'Atlas';
-                const msg = `Kernel Onipotente Online. Modo Solar ${this.state.solarMode} ativo. Arquétipo ${arch} no controle.`;
-                
-                // Tenta usar a função de fala que já existe no seu projeto
-                if (window.App && App.announce) {
-                    App.announce(msg);
-                } else if (window.speakBlock) {
-                    // Fallback para o seu inline-7.js
-                    console.log(msg);
-                }
-            }, 2000);
-        },
-
-        async loadStoredCards() {
-            // Busca os cards salvos e renderiza no início
-            if (window.App && App.indexedDB) {
-                const deck = await App.indexedDB.getDeck();
-                const heroCards = deck.filter(i => i.id.startsWith('hero_'));
-                heroCards.forEach(c => this.importHeroCard(c.data));
-            }
-        }
-    };
-
-    // Expondo para o escopo global (Window)
-    window.DualKernel = Kernel;
-
-    // Auto-inicialização
-    window.addEventListener('DOMContentLoaded', () => Kernel.init());
-})();
-
 </script>
 
 <!-- ========================================================
